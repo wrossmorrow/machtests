@@ -222,8 +222,10 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-				&& log "parsing frontmatter..."
+			if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then
+				log "parsing frontmatter..."
+				sed -En '|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|p' ${YENTESTS_TEST_FILE}
+			fi
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
