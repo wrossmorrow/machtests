@@ -1,6 +1,9 @@
 #!/bin/bash
-
-# test matlab software package
+# 
+# @name matlab startup
+# @description test matlab software package
+# @notimeout
+# 
 
 script_home=$( dirname $(realpath 0$) )
 source $script_home/../env.sh
