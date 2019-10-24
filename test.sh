@@ -36,7 +36,8 @@
 # 
 function _testCommand() {
 
-	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "testing command \"${1}\""
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		&& log "testing command \"${1}\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -46,8 +47,7 @@ function _testCommand() {
 
 	YENTESTS_TEST_START=$( date +%s )
 
-	TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp/${YENTESTS_TEST_HOST}"
-	mkdir -p ${TMP_LOG_DIR}
+	TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp" && mkdir -p ${TMP_LOG_DIR}
     
 	# remove any existing log files set log files
 	rm -f "${TMP_LOG_DIR}/tmp/time.log" > /dev/null
@@ -75,8 +75,12 @@ function _testCommand() {
 	fi
 	
 	# check output log and set variable
-	YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
-	[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="OUTPUT BLANK"
+	if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
+		YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
+		[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="OUTPUT BLANK"
+	else 
+		YENTESTS_TEST_OUTPUT="OUTPUT BLANK"
+	fi
 
 	# check time log is not empty and set duration from time log
 	if [[ -f ${YENTESTS_TEST_TIMELOG} && -s ${YENTESTS_TEST_TIMELOG} ]]; then
