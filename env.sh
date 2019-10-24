@@ -11,6 +11,10 @@ test_dt=$( date +%F-%T )
 
 export host=$HOSTNAME
 
+# NO PASSWORDS IN TRACKED FILES
+
+influx_url="'https://monitor.gsbrss.com:8086/write?db=yentests&u=influx&p=influx&precision=s'"
+
 # setup module system
 source /etc/profile.d/lmod.sh
 
