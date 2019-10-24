@@ -67,7 +67,7 @@ function _testCommand() {
 	else # test command with timeout
 
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-			&& log "running test with timeout: ${YENTESTS_TIME_TIMEOUT}s"
+			&& log "running test with timeout: ${YENTESTS_TEST_TIMEOUT}s"
 
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++" \
@@ -248,6 +248,7 @@ function testScript() {
 					YENTESTS_TIME_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
 				fi
 			fi
+			log ${YENTESTS_TIME_TIMEOUT}
 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 			# 
