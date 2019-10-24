@@ -259,9 +259,11 @@ function testScript() {
 		log "cleaning environment..."
 
 		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
-		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' 
-		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' | xargs -i echo {}
-		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' | xargs -i unset {}
+		# unset is a shell builtin, so we can't use xargs: See
+		# 
+		# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
+		# 
+		while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -341,7 +343,7 @@ fi
 
 # re-write the runid into the run id file
 echo "${YENTESTS_TEST_RUNID}" > ${YENTESTS_TEST_RIDF}
-export YENTESTS_TEST_RUNID=${YENTESTS_TEST_RUNID} # SHOULD BE AVAILABLE 
+export YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE 
 
 # create TEST_ID as a date-like string? that would be globally unique, 
 # but not _immediately_ comparable
