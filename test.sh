@@ -76,12 +76,9 @@ function _testCommand() {
 	YENTESTS_TEST_EXITCODE=${?}
 
 	# check error log
-	if [[ -f ${YENTESTS_TEST_ERRLOG} ]] ; then
-		YENTESTS_TEST_ERROR=$( cat ${YENTESTS_TEST_ERRLOG} )
-		[[ -z "${YENTESTS_TEST_ERROR}" ]] && YENTESTS_TEST_ERROR="stderr blank"
-	else 
-		YENTESTS_TEST_ERROR="test error log not created"
-	fi
+	[[ -f ${YENTESTS_TEST_ERRLOG} ]] \
+		&& YENTESTS_TEST_ERROR=$( cat ${YENTESTS_TEST_ERRLOG} ) \
+		|| YENTESTS_TEST_ERROR="test error log not created"
 
 	# check time log is not empty and set duration from time log
 	if [[ -f ${YENTESTS_TEST_TIMELOG} && -s ${YENTESTS_TEST_TIMELOG} ]]; then
