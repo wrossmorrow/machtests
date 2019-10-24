@@ -431,7 +431,7 @@ else
 # make sure runlog location exists
 mkdir -p ${YENTESTS_RUN_LOG%/*}
 function log() {
-	echo "$( date +"%FT%T" ): $1" >> ${YENTESTS_RUN_LOG}
+	echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
 }
 fi
 export -f log
