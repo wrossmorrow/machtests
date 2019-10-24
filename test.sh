@@ -145,7 +145,7 @@ function _testCommand() {
 						-X POST "'${YENTESTS_INFLUXDB_URL}'" --data-binary "'${TMP_INFLUXDB_DATA}'" )
 		if [[ ${CURL_STAT} -ne 200 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
-			[[ -f cat ${TMP_LOG_DIR}/curl.log ]] \
+			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
 				&& log $( cat ${TMP_LOG_DIR}/curl.log )
 		fi
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null
