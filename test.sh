@@ -140,7 +140,8 @@ function _testCommand() {
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
-		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log -X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
+		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
+						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
 		if [[ ${CURL_STAT} -ne 200 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
@@ -242,7 +243,7 @@ function testScript() {
 			fi
 
 			# define test version (with a default)
-			YENTESTS_TEST_VERSION=$( sed -En 's|^[ ]*#[ ]*@version (.*)|\1|p;/^[ ]*#[ ]*@version /q' ${YENTESTS_TEST_FILE} )
+			YENTESTS_TEST_VERSION=$( sed -En 's|^[ ]*#[ ]*@version ([0-9]+)(.*)|\1|p;/^[ ]*#[ ]*@version /q' ${YENTESTS_TEST_FILE} )
 			[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
 
 			# unset the timeout if "notimeout" declared in the test script frontmatter
