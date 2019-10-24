@@ -184,25 +184,21 @@ function testScript() {
 					YENTESTS_TEST_NAME="${PWD}/${1}"
 				fi
 			fi
-			log ${YENTESTS_TEST_NAME}
 
 			# define test version (with a default)
 			YENTESTS_TEST_VERSION=$( sed -En "/^[ ]*#[ ]*@version (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@version (.*)/\1/" )
 			[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
 
-			log ${YENTESTS_TEST_VERSION}
-
 			# unset the timeout if "notimeout" declared in the test script frontmatter
-			if [[ -z $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ) ]] ; then 
+			# if "notimeout" declared, ignore any specified timeout
+			if [[ -z $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
 				unset YENTESTS_TIME_TIMEOUT
 			else 
 				# if timeout given in frontmatter (in seconds), replace timeout
-				if [[ -n $( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ) ]] ; then 
-					YENTESTS_TIME_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
+				if [[ -n $( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
+					YENTESTS_TIME_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
 				fi
 			fi
-
-			log ${YENTESTS_TIME_TIMEOUT}
 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 			# 
