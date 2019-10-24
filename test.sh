@@ -141,8 +141,7 @@ function _testCommand() {
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
 		# log "to influxdb: ${TMP_INFLUXDB_DATA}"
-		CURL_STAT=$( curl -s -k -o ${TMP_LOG_DIR}/curl.log -w "%{http_code}" \
-						-X POST "'${YENTESTS_INFLUXDB_URL}'" --data-binary "'${TMP_INFLUXDB_DATA}'" )
+		CURL_STAT=$( curl -s -k -o ${TMP_LOG_DIR}/curl.log -w "%{http_code}" -X POST "'${YENTESTS_INFLUXDB_URL}'" --data-binary "'${TMP_INFLUXDB_DATA}'" )
 		if [[ ${CURL_STAT} -ne 200 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
