@@ -144,7 +144,7 @@ function _testCommand() {
 		if [[ ${CURL_STAT} -ne 200 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
-				&& log $( cat ${TMP_LOG_DIR}/curl.log )
+				&& cat ${TMP_LOG_DIR}/curl.log
 		fi
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
