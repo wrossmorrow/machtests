@@ -216,18 +216,28 @@ function testScript() {
 					# find the hash of this test-version to use as a test id across runs, or create/update it
 					TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
 					if [[ -z ${TEST_HASH_LINE} ]] ; then 
+
+						log "no current hash line in hash log file..."
+
 						TEST_HASH=$( sha256sum ${FILE} )
 						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" >> ${YENTESTS_HASH_LOG}
+
 					else 
+
+						log "changing hash log file line..."
+
 						TEST_VASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
 						TEST_HASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						if [[ ${TEST_VASH} -ne ${YENTESTS_TEST_VERSION} ]] ; then
 							TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						fi
+
 					fi
 
 				else  # create a hash log file here
+
+					log "creating hash log file..."
 
 					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" > ${YENTESTS_HASH_LOG}
