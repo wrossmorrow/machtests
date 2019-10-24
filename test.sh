@@ -105,7 +105,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	log "${YENTESTS_TEST_NAME}: ${YENTESTS_TEST_STATUS}"
+	log "${YENTESTS_TEST_NAME} | ${YENTESTS_TEST_STATUS}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
