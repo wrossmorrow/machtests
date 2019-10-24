@@ -216,8 +216,6 @@ function testScript() {
 			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "loading environment..."
 
-			cat ${_YENTESTS_TEST_HOME}/.defaults
-
 			# load default variables and any environment variables specific to this test suite
 			source ${_YENTESTS_TEST_HOME}/.defaults
 			[[ -f .env ]] && source .env
@@ -456,6 +454,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # store relevant env vars for use in test suites... we will clean and reload this on each run
+# quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
 env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
 # loop over test suites
