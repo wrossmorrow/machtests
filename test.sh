@@ -245,7 +245,8 @@ function testScript() {
 			else 
 				# if timeout given in frontmatter (in seconds), replace timeout
 				if [[ -n $( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
-					YENTESTS_TEST_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
+					log "$( grep -e "^[ ]*#[ ]*@timeout [0-9]+" ${YENTESTS_TEST_FILE} )"
+					YENTESTS_TEST_TIMEOUT=$( grep -e "^[ ]*#[ ]*@timeout [0-9]+" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
 					log "custom timeout: ${YENTESTS_TEST_TIMEOUT}"
 				fi
 			fi
