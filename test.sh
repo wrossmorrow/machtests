@@ -241,14 +241,14 @@ function testScript() {
 			# unset the timeout if "notimeout" declared in the test script frontmatter
 			# if "notimeout" declared, ignore any specified timeout
 			if [[ -z $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
-				unset YENTESTS_TIME_TIMEOUT
+				unset YENTESTS_TEST_TIMEOUT
 			else 
 				# if timeout given in frontmatter (in seconds), replace timeout
 				if [[ -n $( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
-					YENTESTS_TIME_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
+					YENTESTS_TEST_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
 				fi
 			fi
-			log ${YENTESTS_TIME_TIMEOUT}
+			log ${YENTESTS_TEST_TIMEOUT}
 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 			# 
