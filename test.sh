@@ -265,6 +265,8 @@ function testScript() {
 		# 
 		while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
 
+		[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] && log "WARNING: looks like environment wasn't cleaned"
+
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
 		# DONE
