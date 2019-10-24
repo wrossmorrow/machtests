@@ -224,31 +224,30 @@ function testScript() {
 
 			if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then
 				log "parsing frontmatter..."
-				sed -En '|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|p' ${YENTESTS_TEST_FILE}
+				sed -En 's|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|\0|p' ${YENTESTS_TEST_FILE}
 			fi
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
 			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-				YENTESTS_TEST_NAME=$( sed -En '|^[ ]*#[ ]*@name (.*)|{p;q}' ${YENTESTS_TEST_FILE} | sed -E 's|^[ ]*#[ ]*@name (.*)|\1|' )
+				YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
 				if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
 					YENTESTS_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
 				fi
 			fi
 
 			# define test version (with a default)
-			YENTESTS_TEST_VERSION=$( sed -En '|^[ ]*#[ ]*@version (.*)|{p;q}' ${YENTESTS_TEST_FILE} | sed -E 's|^[ ]*#[ ]*@version (.*)|\1|' )
+			YENTESTS_TEST_VERSION=$( sed -En 's|^[ ]*#[ ]*@version (.*)|\1|p;/^[ ]*#[ ]*@version /q' ${YENTESTS_TEST_FILE} )
 			[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
 
 			# unset the timeout if "notimeout" declared in the test script frontmatter
 			# if "notimeout" declared, ignore any specified timeout
-			if [[ -n $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
+			if [[ -n $( sed -En "|^[ ]*#[ ]*@notimeout|\0|p;/^[ ]*#[ ]*@notimeout/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
 				unset YENTESTS_TEST_TIMEOUT
 			else 
-				# if timeout given in frontmatter (in seconds), replace timeout
-				if [[ -n $( sed -En "|^[ ]*#[ ]*@timeout|{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
-					log "$( grep -e "^[ ]*\#[ ]*@timeout" ${YENTESTS_TEST_FILE} )"
-					YENTESTS_TEST_TIMEOUT=$( sed -En '|^[ ]*#[ ]*@timeout [0-9]+|{p;q}' ${YENTESTS_TEST_FILE} | sed -E '|^[ ]*#[ ]*@timeout ([0-9]+)|\1|' )
+				# if timeout given in script frontmatter (in seconds), replace timeout
+				if [[ -n $( sed -En "s|^[ ]*#[ ]*@timeout [0-9]+|\0|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
+					YENTESTS_TEST_TIMEOUT=$( sed -En "s|^[ ]*#[ ]*@timeout ([0-9]+)|\1|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} )
 					log "custom timeout: ${YENTESTS_TEST_TIMEOUT}"
 				fi
 			fi
