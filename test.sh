@@ -141,7 +141,7 @@ function _testCommand() {
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
 		# log "to influxdb: ${TMP_INFLUXDB_DATA}"
-		curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${TMP_INFLUXDB_DATA}
+		curl -s -k -X POST "'${YENTESTS_INFLUXDB_URL}'" --data-binary "'${TMP_INFLUXDB_DATA}'"
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
