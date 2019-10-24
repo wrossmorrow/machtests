@@ -189,7 +189,8 @@ function testScript() {
 		# start exporting all variable definitions included below
 		set -a
 
-			log "loading environment..."
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "loading environment..."
 
 			# load default variables and any environment variables specific to this test suite
 			source ${_YENTESTS_TEST_HOME}/.defaults \
@@ -204,7 +205,8 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "parsing frontmatter..."
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "parsing frontmatter..."
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
@@ -236,7 +238,8 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "reading/creating test script hash..."
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "reading/creating test script hash..."
 
 			# if we have a hash log file to store hashes in, use that
 			if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
@@ -247,14 +250,16 @@ function testScript() {
 					YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
 					if [[ -z ${YENTESTS_TEST_HASH_LINE} ]] ; then 
 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "no current hash line in hash log file..."
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "no current hash line in hash log file..."
 
 						YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${YENTESTS_HASH_LOG}
 
 					else 
 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "changing hash log file line..."
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "changing hash log file line..."
 
 						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
 						YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
@@ -267,7 +272,8 @@ function testScript() {
 
 				else  # create a hash log file here
 
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "creating hash log file..."
+					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+						&& log "creating hash log file..."
 
 					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${YENTESTS_HASH_LOG}
