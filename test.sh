@@ -55,7 +55,7 @@ function _testCommand() {
 	YENTESTS_TEST_OUTLOG="${TMP_LOG_DIR}/output.log"
 
 	# use env var to signal whether to use a timeout
-	if [[ -z ${YENTESTS_TIME_TIMEOUT} ]] ; then
+	if [[ -z ${YENTESTS_TEST_TIMEOUT} ]] ; then
 
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test without a timeout"
@@ -68,7 +68,7 @@ function _testCommand() {
 
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test with timeout: ${YENTESTS_TIME_TIMEOUT}s"
-			
+
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++" \
 			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
