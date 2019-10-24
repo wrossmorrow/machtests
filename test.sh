@@ -184,10 +184,13 @@ function testScript() {
 					YENTESTS_TEST_NAME="${PWD}/${1}"
 				fi
 			fi
+			log ${YENTESTS_TEST_NAME}
 
 			# define test version (with a default)
-			YENTESTS_TEST_VERS=$( sed -En "/^[ ]*#[ ]*@version (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@version (.*)/\1/" )
-			[[ -z ${YENTESTS_TEST_VERS} ]] && YENTESTS_TEST_VERS=0
+			YENTESTS_TEST_VERSION=$( sed -En "/^[ ]*#[ ]*@version (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@version (.*)/\1/" )
+			[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
+
+			log ${YENTESTS_TEST_VERSION}
 
 			# unset the timeout if "notimeout" declared in the test script frontmatter
 			if [[ -z $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ) ]] ; then 
@@ -198,6 +201,8 @@ function testScript() {
 					YENTESTS_TIME_TIMEOUT=$( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
 				fi
 			fi
+
+			log ${YENTESTS_TIME_TIMEOUT}
 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 			# 
@@ -216,20 +221,20 @@ function testScript() {
 					TEST_HASH_LINE=$( sed -En "|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|{p;q}" ${YENTESTS_HASH_LOG} )
 					if [[ -z ${TEST_HASH_LINE} ]] ; then 
 						TEST_HASH=$( sha256sum ${FILE} )
-						echo "${PWD}/${YENTESTS_TEST_FILE},${TEST_VERS},${TEST_HASH}" >> ${YENTESTS_HASH_LOG}
+						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" >> ${YENTESTS_HASH_LOG}
 					else 
 						TEST_VASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
 						TEST_HASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
-						if [[ ${TEST_VASH} -ne ${TEST_VERS} ]] ; then
+						if [[ ${TEST_VASH} -ne ${YENTESTS_TEST_VERSION} ]] ; then
 							TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} )
-							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${TEST_VERS},${TEST_HASH}|" ${YENTESTS_HASH_LOG}
+							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						fi
 					fi
 
 				else  # create a hash log file here
 
 					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} )
-					echo "${PWD}/${YENTESTS_TEST_FILE},${TEST_VERS},${TEST_HASH}" > ${YENTESTS_HASH_LOG}
+					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" > ${YENTESTS_HASH_LOG}
 
 				fi 
 
