@@ -181,7 +181,7 @@ function testScript() {
 			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
 				YENTESTS_TEST_NAME=$( sed -En "/^[ ]*#[ ]*@name (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@name (.*)/\1/" )
 				if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-					YENTESTS_TEST_NAME="${PWD}/${1}"
+					YENTESTS_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
 				fi
 			fi
 
