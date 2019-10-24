@@ -1,6 +1,15 @@
 #!/bin/bash
+# 
+# @name ml_gurobi
+# @description test gurobi software package
+# @version 1
+# 
 
-# test gurobi software package
+module load gurobi
+
+exit
+
+# OLD VERSION BELOW HERE # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 script_home=$( dirname $(realpath 0$) )
 source $script_home/../env.sh
