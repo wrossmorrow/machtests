@@ -142,10 +142,13 @@ function _testCommand() {
 	else 
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
 						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
-		if [[ ${CURL_STAT} -ne 200 ]] ; then 
+		if [[ ${CURL_STAT} -ne 204 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
 				&& cat ${TMP_LOG_DIR}/curl.log
+		else 
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "wrote test summary data to influxdb"
 		fi
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
