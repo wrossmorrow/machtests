@@ -214,7 +214,7 @@ function testScript() {
 				if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
 
 					# find the hash of this test-version to use as a test id across runs, or create/update it
-					TEST_HASH_LINE=$( sed -En "|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|{p;q}" ${YENTESTS_HASH_LOG} )
+					TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
 					if [[ -z ${TEST_HASH_LINE} ]] ; then 
 						TEST_HASH=$( sha256sum ${FILE} )
 						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" >> ${YENTESTS_HASH_LOG}
