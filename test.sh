@@ -425,7 +425,7 @@ mkdir -p ${YENTESTS_TEST_RESULTS%/*}
 # create and export the log function to make it accessible in children
 if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
 function log() {
-	echo "$( date +"%FT%T" ): $1"
+	echo "$( date +"%FT%T.%N" ): $1"
 }
 else 
 # make sure runlog location exists
