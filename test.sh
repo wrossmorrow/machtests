@@ -46,13 +46,11 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	YENTESTS_TEST_START=$( date +%s )
-
-	TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp" && mkdir -p ${TMP_LOG_DIR}
     
 	# set log files
-	YENTESTS_TEST_TIMELOG="${TMP_LOG_DIR}/time.log"
-	YENTESTS_TEST_OUTLOG="${TMP_LOG_DIR}/output.log"
-	YENTESTS_TEST_ERRLOG="${TMP_LOG_DIR}/error.log"
+	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
+	YENTESTS_TEST_OUTLOG="${YENTESTS_TMP_LOG_DIR}/output.log"
+	YENTESTS_TEST_ERRLOG="${YENTESTS_TMP_LOG_DIR}/error.log"
 
 	# use env var to signal whether to use a timeout
 	if [[ -z ${YENTESTS_TEST_TIMEOUT} ]] ; then
@@ -76,21 +74,13 @@ function _testCommand() {
 
 	fi
 	YENTESTS_TEST_EXITCODE=${?}
-	
-	# check output log and set variable
-	#if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
-	#	YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
-	#	[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="test output blank"
-	#else 
-	#	YENTESTS_TEST_OUTPUT="no test output"
-	#fi
 
 	# check error log
 	if [[ -f ${YENTESTS_TEST_ERRLOG} ]] ; then
 		YENTESTS_TEST_ERROR=$( cat ${YENTESTS_TEST_ERRLOG} )
-		[[ -z "$YENTESTS_TEST_ERROR" ]] && YENTESTS_TEST_ERROR="stderr blank"
+		[[ -z "${YENTESTS_TEST_ERROR}" ]] && YENTESTS_TEST_ERROR="stderr blank"
 	else 
-		YENTESTS_TEST_OUTPUT="test error log not created"
+		YENTESTS_TEST_ERROR="test error log not created"
 	fi
 
 	# check time log is not empty and set duration from time log
@@ -163,9 +153,15 @@ function _testCommand() {
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# 
+	# CLEAN UP
+	# 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 	# clean up log files
-	for f in ( "time" "output" "error" ) ; do  
-		rm -f "${TMP_LOG_DIR}/${f}.log" > /dev/null
+	for f in "time" "output" "error" ; do  
+		rm -f "${YENTESTS_TMP_LOG_DIR}/${f}.log" > /dev/null
 	done
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -416,6 +412,11 @@ source /etc/profile.d/lmod.sh
 
 # make sure log directory(s) exists
 mkdir -p ${YENTESTS_TEST_LOGS}
+
+# create location of temporary log dir and make sure it exists
+YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp"
+export YENTESTS_TMP_LOG_DIR
+mkdir -p ${YENTESTS_TMP_LOG_DIR}
 
 # create and export the log function to make it accessible in children
 if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
