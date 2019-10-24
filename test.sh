@@ -96,8 +96,8 @@ function _testCommand() {
 
 	# check exit code and set debug message
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
-		&& YENTESTS_TEST_STATUS=",0,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION}," \
-		|| YENTESTS_TEST_STATUS=",1,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_OUTPUT}"
+		&& YENTESTS_TEST_STATUS="${YENTESTS_TEST_NAME},0,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION}," \
+		|| YENTESTS_TEST_STATUS="${YENTESTS_TEST_NAME},1,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_OUTPUT}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -105,7 +105,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	log "${YENTESTS_TEST_NAME} | ${YENTESTS_TEST_STATUS}"
+	log "${YENTESTS_TEST_STATUS}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
