@@ -94,7 +94,7 @@ function _testCommand() {
 	# check exit code and set success flag
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] && TMP_SUCCESS="S" || TMP_SUCCESS="F"
 
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_NAME},${TMP_SUCCESS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${TMP_SUCCESS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -265,7 +265,6 @@ function testScript() {
 				# if timeout given in script frontmatter (in seconds), replace timeout
 				if [[ -n $( sed -En "s|^[ ]*#[ ]*@timeout [0-9]+|\0|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
 					YENTESTS_TEST_TIMEOUT=$( sed -En "s|^[ ]*#[ ]*@timeout ([0-9]+)|\1|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} )
-					log "custom timeout: ${YENTESTS_TEST_TIMEOUT}"
 				fi
 			fi
 
@@ -330,9 +329,7 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		# log the call to the run the test
-		log "${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_HASH}"
-
+		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
