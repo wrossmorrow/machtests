@@ -96,8 +96,8 @@ function _testCommand() {
 
 	# check exit code and set debug message
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
-		&& YENTESTS_TEST_STATUS="SUCCESS | ${YENTESTS_TEST_EXITCODE} | ${YENTESTS_TEST_DURATION} sec " \
-		|| YENTESTS_TEST_STATUS="FAILURE | ${YENTESTS_TEST_EXITCODE} | ${YENTESTS_TEST_DURATION} sec | ${YENTESTS_TEST_OUTPUT}"
+		&& YENTESTS_TEST_STATUS=",0,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION}," \
+		|| YENTESTS_TEST_STATUS=",1,${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_OUTPUT}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -461,7 +461,7 @@ env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 for d in tests/*/ ; do 
 
 	# enter this test suite directory
-	cd ${d} 
+	cd ${d}
 	
 	# run test.sh file in target folder, if it exists
 	[[ -f test.sh ]] && testScript test.sh
