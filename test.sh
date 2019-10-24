@@ -148,7 +148,7 @@ function _testCommand() {
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
 				&& log $( cat ${TMP_LOG_DIR}/curl.log )
 		fi
-		rm ${TMP_LOG_DIR}/curl.log > /dev/null
+		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
