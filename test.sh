@@ -56,7 +56,7 @@ function _testCommand() {
 	
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 
-		log "DRY RUN: here we would actually run a test..."
+		log "DRYRUN: here we would actually run a test..."
 		YENTESTS_TEST_EXITCODE=0
 
 	else 
@@ -121,10 +121,10 @@ ${YENTESTS_TEST_START}"
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		echo "DRY RUN: ${YENTESTS_INFLUXDB_DATA}"
+		log "influxdb: ${YENTESTS_INFLUXDB_DATA}"
 	else 
 		echo "DEBUGGING: ${YENTESTS_INFLUXDB_DATA}"
-		#curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
+		# curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
