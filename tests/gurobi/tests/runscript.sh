@@ -2,6 +2,7 @@
 # 
 # @name run gurobi
 # @description can we run a gurobi script
+# @version 1 
 # 
 
 module load gurobi
