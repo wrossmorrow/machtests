@@ -60,7 +60,7 @@ function _testCommand() {
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test without a timeout"
 
-		[[ -n ${YENTESTS_DRY_RUN} ]] \ 
+		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (without a timeout)... ++"
 			|| { time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
 
@@ -69,7 +69,7 @@ function _testCommand() {
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test with timeout: ${YENTESTS_TIME_TIMEOUT}s"
 
-		[[ -n ${YENTESTS_DRY_RUN} ]] \ 
+		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++"
 			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
 					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
