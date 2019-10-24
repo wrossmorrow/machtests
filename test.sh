@@ -272,11 +272,10 @@ function testScript() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-echo "starting"
+echo "starting yentests..."
 
 # tests home folder... use _ first to keep this variable defined
-# export _YENTESTS_TEST_HOME=/ifs/yentools/yentests
-export _YENTESTS_TEST_HOME=${PWD}
+export _YENTESTS_TEST_HOME=/ifs/yentools/yentests
 
 # for this process, move to the tests home directory
 cd ${_YENTESTS_TEST_HOME}
