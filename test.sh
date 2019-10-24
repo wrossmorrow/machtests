@@ -156,12 +156,14 @@ function testScript() {
 	# don't do anything unless passed a "real" file
 	if [[ $# -gt 0 && -f ${1} ]] ; then
 
-
 		# start exporting all variable definitions included below
 		set -a
 
+			log "loading environment..."
+
 			# load default variables and any environment variables specific to this test suite
-			source ${_YENTESTS_TEST_HOME}/.defaults && [[ -f .env ]] && source .env
+			source ${_YENTESTS_TEST_HOME}/.defaults \
+				&& [[ -f .env ]] && source .env
 
 			# strip PWD (not FULL path, just PWD) from filename, if it was passed
 			YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
@@ -171,6 +173,8 @@ function testScript() {
 			# EXAMINE FRONTMATTER
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+			log "parsing frontmatter..."
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
@@ -200,6 +204,8 @@ function testScript() {
 			# READ OR CONSTRUCT TEST HASH
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+			log "reading/creating test script hash..."
 
 			# if we have a hash log file to store hashes in, use that
 			if [[ -z ${YENTESTS_HASH_LOG} ]] ; then 
@@ -240,7 +246,7 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		echo "here I would actually run a test"
+		log "here I would actually run a test..."
 		# _testCommand "bash ${YENTESTS_TEST_FILE}"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -249,8 +255,10 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+		log "cleaning environment..."
+
 		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
-		# env | grep '^YENTESTS_' | xargs -i unset {}
+		env | grep '^YENTESTS_' | xargs -i unset {}
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -361,8 +369,6 @@ for d in tests/*/ ; do
 
 	# enter this test suite directory
 	cd ${d} 
-
-	echo $PWD
 	
 	# run test.sh file in target folder, if it exists
 	[[ -f test.sh ]] && testScript test.sh
