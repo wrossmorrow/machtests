@@ -360,7 +360,9 @@ for d in tests/*/ ; do
 	log "${YENTESTS_TEST_RUNID},${d}"
 
 	# enter this test suite directory
-	cd ${d}
+	cd ${d} 
+
+	echo $PWD
 	
 	# run test.sh file in target folder, if it exists
 	[[ -f test.sh ]] && testScript test.sh
