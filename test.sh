@@ -216,11 +216,11 @@ function testScript() {
 			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "loading environment..."
 
-			log ${_YENTESTS_TEST_HOME}
+			cat ${_YENTESTS_TEST_HOME}/.defaults
 
 			# load default variables and any environment variables specific to this test suite
 			source ${_YENTESTS_TEST_HOME}/.defaults
-			# [[ -f .env ]] && source .env
+			[[ -f .env ]] && source .env
 
 			env | grep '^YENTESTS_INFLUXDB'
 
