@@ -140,8 +140,8 @@ function _testCommand() {
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
-		log "to influxdb: ${TMP_INFLUXDB_DATA}"
-		# curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${TMP_INFLUXDB_DATA}
+		# log "to influxdb: ${TMP_INFLUXDB_DATA}"
+		curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${TMP_INFLUXDB_DATA}
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
