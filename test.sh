@@ -228,14 +228,14 @@ function testScript() {
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
 			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-				YENTESTS_TEST_NAME=$( sed -En "/^[ ]*#[ ]*@name (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@name (.*)/\1/" )
+				YENTESTS_TEST_NAME=$( sed -En "|^[ ]*#[ ]*@name (.*)|{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s|^[ ]*#[ ]*@name (.*)|\1|" )
 				if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
 					YENTESTS_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
 				fi
 			fi
 
 			# define test version (with a default)
-			YENTESTS_TEST_VERSION=$( sed -En "/^[ ]*#[ ]*@version (.*)/{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s/^[ ]*#[ ]*@version (.*)/\1/" )
+			YENTESTS_TEST_VERSION=$( sed -En "|^[ ]*#[ ]*@version (.*)|{p;q}" ${YENTESTS_TEST_FILE} | sed -E "s|^[ ]*#[ ]*@version (.*)|\1|" )
 			[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
 
 			# unset the timeout if "notimeout" declared in the test script frontmatter
@@ -244,9 +244,9 @@ function testScript() {
 				unset YENTESTS_TEST_TIMEOUT
 			else 
 				# if timeout given in frontmatter (in seconds), replace timeout
-				if [[ -n $( sed -En "/^[ ]*#[ ]*@timeout [0-9]+/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
-					log "$( grep -e "^[ ]*#[ ]*@timeout [0-9]+" ${YENTESTS_TEST_FILE} )"
-					YENTESTS_TEST_TIMEOUT=$( grep -e "^[ ]*#[ ]*@timeout [0-9]+" ${YENTESTS_TEST_FILE} | sed -E "/^[ ]*#[ ]*@timeout ([0-9]+)/\1/" )
+				if [[ -n $( sed -En "|^[ ]*#[ ]*@timeout|{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
+					log "$( grep -e "^[ ]*\#[ ]*@timeout" ${YENTESTS_TEST_FILE} )"
+					YENTESTS_TEST_TIMEOUT=$( sed -En "|^[ ]*#[ ]*@timeout [0-9]+|{p;q}" ${YENTESTS_TEST_FILE} | sed -E "|^[ ]*#[ ]*@timeout ([0-9]+)|\1|" )
 					log "custom timeout: ${YENTESTS_TEST_TIMEOUT}"
 				fi
 			fi
