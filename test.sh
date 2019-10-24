@@ -247,6 +247,9 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+		# log the call to the run the test
+		log "${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_HASH}"
+
 		log "here I would actually run a test..."
 		# _testCommand "bash ${YENTESTS_TEST_FILE}"
 
@@ -255,8 +258,6 @@ function testScript() {
 		# CLEAR VARIABLES
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-		log "cleaning environment..."
 
 		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
 		# unset is a shell builtin, so we can't use xargs: See
@@ -370,9 +371,6 @@ env | grep '^YENTESTS_' > .defaults
 
 # loop over test suites
 for d in tests/*/ ; do 
-
-	# log the call to the test directory
-	log "${YENTESTS_TEST_RUNID},${d}"
 
 	# enter this test suite directory
 	cd ${d} 
