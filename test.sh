@@ -217,8 +217,8 @@ function testScript() {
 				&& log "loading environment..."
 
 			# load default variables and any environment variables specific to this test suite
-			source ${_YENTESTS_TEST_HOME}/.defaults \
-				&& [[ -f .env ]] && source .env
+			source ${_YENTESTS_TEST_HOME}/.defaults
+			# [[ -f .env ]] && source .env
 
 			env | grep '^YENTESTS_INFLUXDB'
 
@@ -340,7 +340,8 @@ function testScript() {
 		# 
 		while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
 
-		[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] && log "WARNING: looks like environment wasn't cleaned"
+		[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] \
+			&& log "WARNING: looks like environment wasn't cleaned"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
