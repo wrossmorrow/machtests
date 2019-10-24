@@ -5,7 +5,8 @@
 # @author Ferdi Evalle
 # @created 
 # @updated 
-# @version
+# @version 1
+# @timeout 5
 # 
 
 ls -al /tmp
