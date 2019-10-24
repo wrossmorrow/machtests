@@ -219,7 +219,7 @@ function testScript() {
 
 						log "no current hash line in hash log file..."
 
-						TEST_HASH=$( sha256sum ${FILE} )
+						TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${TEST_HASH}" >> ${YENTESTS_HASH_LOG}
 
 					else 
