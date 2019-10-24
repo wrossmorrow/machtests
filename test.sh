@@ -140,9 +140,6 @@ function _testCommand() {
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
-		# log "to influxdb: ${TMP_INFLUXDB_DATA}"
-		log ${YENTESTS_INFLUXDB_URL}
-		curl -k -X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}"
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log -X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
 		if [[ ${CURL_STAT} -ne 200 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
