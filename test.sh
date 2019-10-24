@@ -220,6 +220,8 @@ function testScript() {
 			source ${_YENTESTS_TEST_HOME}/.defaults \
 				&& [[ -f .env ]] && source .env
 
+			env | grep '^YENTESTS'
+
 			# strip PWD (not FULL path, just PWD) from filename, if it was passed
 			YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
 
