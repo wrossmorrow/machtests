@@ -53,26 +53,29 @@ function _testCommand() {
 	rm -f "${TMP_LOG_DIR}/tmp/time.log" > /dev/null
 	YENTESTS_TEST_TIMELOG="${TMP_LOG_DIR}/time.log"
 	YENTESTS_TEST_OUTLOG="${TMP_LOG_DIR}/output.log"
-	
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 
-		log "DRYRUN: here we would actually run a test..."
-		YENTESTS_TEST_EXITCODE=0
+	# use env var to signal whether to use a timeout
+	if [[ -z ${YENTESTS_TIME_TIMEOUT} ]] ; then
 
-	else 
+		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			&& log "running test without a timeout"
 
-		log "DEBUGGING: here we would actually run a test..."
+		[[ -n ${YENTESTS_DRY_RUN} ]] \ 
+			&& log "++ dryrun: here we would actually run a test (without a timeout)... ++"
+			|| { time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
 
-		# use env var to signal whether to use a timeout
-		#if [[ -z ${YENTESTS_TIME_TIMEOUT} ]] ; then
-		#	{ time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
-		#else # test command with timeout
-		#	{ timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
-		#		/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
-		#fi
-		YENTESTS_TEST_EXITCODE=${?}
+	else # test command with timeout
+
+		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			&& log "running test with timeout: ${YENTESTS_TIME_TIMEOUT}s"
+
+		[[ -n ${YENTESTS_DRY_RUN} ]] \ 
+			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++"
+			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
+					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
 
 	fi
+	YENTESTS_TEST_EXITCODE=${?}
 	
 	# check output log and set variable
 	if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
