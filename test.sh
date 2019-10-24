@@ -241,7 +241,7 @@ function testScript() {
 			# unset the timeout if "notimeout" declared in the test script frontmatter
 			# if "notimeout" declared, ignore any specified timeout
 			log ${YENTESTS_TEST_TIMEOUT}
-			if [[ -z $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
+			if [[ -n $( sed -En "/^[ ]*#[ ]*@notimeout/{p;q}" ${YENTESTS_TEST_FILE} ) ]] ; then 
 				unset YENTESTS_TEST_TIMEOUT
 			else 
 				# if timeout given in frontmatter (in seconds), replace timeout
