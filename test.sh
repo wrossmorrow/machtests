@@ -456,7 +456,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # store relevant env vars for use in test suites... we will clean and reload this on each run
-env | grep '^YENTESTS_' > .defaults
+env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
 # loop over test suites
 for d in tests/*/ ; do 
