@@ -103,7 +103,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
+	echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TEST_RESULTS}
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -330,8 +330,12 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+		log "starting ${YENTESTS_TEST_NAME}" 
+
 		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
+
+		log "finished ${YENTESTS_TEST_NAME}"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -369,7 +373,9 @@ function testScript() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-
+# -r: reset run ids
+# -d: dryrun tests
+# -v: use verbose prints to the logs
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -413,12 +419,17 @@ YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp"
 export YENTESTS_TMP_LOG_DIR
 mkdir -p ${YENTESTS_TMP_LOG_DIR}
 
+# make sure results location exists
+mkdir -p ${YENTESTS_TEST_RESULTS%/*}
+
 # create and export the log function to make it accessible in children
 if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
 function log() {
 	echo "$( date +"%FT%T" ): $1"
 }
 else 
+# make sure runlog location exists
+mkdir -p ${YENTESTS_RUN_LOG%/*}
 function log() {
 	echo "$( date +"%FT%T" ): $1" >> ${YENTESTS_RUN_LOG}
 }
@@ -498,6 +509,9 @@ done
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+# don't need .defaults anymore
+rm .defaults > /dev/null
 
 # don't need this in the environment anymore
 unset _YENTESTS_TEST_HOME
