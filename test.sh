@@ -46,6 +46,7 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	YENTESTS_TEST_START=$( date +%s )
+	YENTESTS_TEST_DATETIME=$( date +"%FT%T" )
     
 	# set log files
 	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
@@ -102,7 +103,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	log "${YENTESTS_TEST_STATUS}"
+	echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
