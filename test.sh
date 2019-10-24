@@ -216,6 +216,8 @@ function testScript() {
 			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "loading environment..."
 
+			log ${_YENTESTS_TEST_HOME}
+
 			# load default variables and any environment variables specific to this test suite
 			source ${_YENTESTS_TEST_HOME}/.defaults
 			# [[ -f .env ]] && source .env
