@@ -209,7 +209,7 @@ function testScript() {
 			log "reading/creating test script hash..."
 
 			# if we have a hash log file to store hashes in, use that
-			if [[ -z ${YENTESTS_HASH_LOG} ]] ; then 
+			if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
 
 				if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
 
