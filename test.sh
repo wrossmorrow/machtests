@@ -259,6 +259,8 @@ function testScript() {
 		log "cleaning environment..."
 
 		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
+		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' 
+		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' | xargs -i echo {}
 		env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' | xargs -i unset {}
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
