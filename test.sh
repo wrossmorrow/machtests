@@ -77,9 +77,9 @@ function _testCommand() {
 	# check output log and set variable
 	if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
 		YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
-		[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="OUTPUT BLANK"
+		[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="test output blank"
 	else 
-		YENTESTS_TEST_OUTPUT="OUTPUT BLANK"
+		YENTESTS_TEST_OUTPUT="no test output"
 	fi
 
 	# check time log is not empty and set duration from time log
@@ -125,7 +125,7 @@ ${YENTESTS_TEST_START}"
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		log "influxdb: ${YENTESTS_INFLUXDB_DATA}"
+		log "to influxdb: ${YENTESTS_INFLUXDB_DATA}"
 	else 
 		echo "DEBUGGING: ${YENTESTS_INFLUXDB_DATA}"
 		# curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
