@@ -23,17 +23,20 @@
 # test command and setup result variables
 # $1 = command to test
 # 
-# We define
+# This function expects the following to be defined: 
+# 
+# 	TBD
+# 
+# This function defines (locally) the following: 
 # 
 # 	YENTESTS_TEST_EXITCODE - 
 # 	YENTESTS_TEST_OUTPUT   - 
 # 	YENTESTS_TEST_DURATION - 
 # 	YENTESTS_TEST_STATUS   - 
 # 
-# 
 function _testCommand() {
 
-	log "testing command \"${1}\""
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "testing command \"${1}\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -51,17 +54,25 @@ function _testCommand() {
 	YENTESTS_TEST_TIMELOG="${TMP_LOG_DIR}/time.log"
 	YENTESTS_TEST_OUTLOG="${TMP_LOG_DIR}/output.log"
 	
-	# how to execute this conditional on script?
-	# if [[ ${1} == *"module"* || ${1} == *"matlab"* ]]; then
+	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
 
-	# use env var to signal whether to use a timeout
-	if [[ -z ${YENTESTS_TIME_TIMEOUT} ]] ; then
-		{ time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
-	else # test command with timeout
-		{ timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
-			/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
+		log "DRY RUN: here we would actually run a test..."
+		YENTESTS_TEST_EXITCODE=0
+
+	else 
+
+		log "DEBUGGING: here we would actually run a test..."
+
+		# use env var to signal whether to use a timeout
+		#if [[ -z ${YENTESTS_TIME_TIMEOUT} ]] ; then
+		#	{ time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
+		#else # test command with timeout
+		#	{ timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
+		#		/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
+		#fi
+		YENTESTS_TEST_EXITCODE=${?}
+
 	fi
-	YENTESTS_TEST_EXITCODE=${?}
 	
 	# check output log and set variable
 	YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
@@ -109,7 +120,11 @@ ${YENTESTS_TEST_START}"
 	YENTESTS_INFLUXDB_DATA=$( echo ${YENTESTS_INFLUXDB_DATA_TMP} | tr -d '\n' )
 
 	# post data to the yentests database in InfluxDB
-	curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
+	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+		echo ${YENTESTS_INFLUXDB_DATA}
+	else 
+		#curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
+	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -119,6 +134,20 @@ ${YENTESTS_TEST_START}"
 
 }
 
+
+# test a command only, and setup result variables
+# 
+# This function expects the following to be defined: 
+# 
+# 	
+# 
+# This function defines (and exports) the following:
+# 
+#	YENTESTS_TEST_NAME - 
+#	YENTESTS_TEST_VERSION - the test version, as read from frontmatter
+#	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
+#	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
+#	
 function testCommand() {
 
 	# don't do anything unless passed a command
@@ -139,16 +168,16 @@ function testCommand() {
 
 # test a script and setup result variables
 # 
-# Expects to be defined: 
+# This function expects the following to be defined: 
 # 
 # 	
 # 
-# Defines (and exports) the following:
+# This function defines (and exports) the following:
 # 
 #	YENTESTS_TEST_FILE - the filename passed here (excluding its path up to PWD)
 #	YENTESTS_TEST_NAME - the given test name, from the environment or from 
-#	YENTESTS_TEST_VERS - the test version, as read from frontmatter
-#	YENTESTS_TEST_VASH - the test version in the current hash log file
+#	YENTESTS_TEST_VERSION - the test version, as read from frontmatter
+#	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
 #	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
 #	
 function testScript() {
@@ -174,7 +203,7 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			log "parsing frontmatter..."
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "parsing frontmatter..."
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
@@ -206,7 +235,7 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			log "reading/creating test script hash..."
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "reading/creating test script hash..."
 
 			# if we have a hash log file to store hashes in, use that
 			if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
@@ -214,21 +243,21 @@ function testScript() {
 				if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
 
 					# find the hash of this test-version to use as a test id across runs, or create/update it
-					TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
-					if [[ -z ${TEST_HASH_LINE} ]] ; then 
+					YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
+					if [[ -z ${YENTESTS_TEST_HASH_LINE} ]] ; then 
 
-						log "no current hash line in hash log file..."
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "no current hash line in hash log file..."
 
 						YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${YENTESTS_HASH_LOG}
 
 					else 
 
-						log "changing hash log file line..."
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "changing hash log file line..."
 
-						TEST_VASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
-						YENTESTS_TEST_HASH=$( echo ${TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
-						if [[ ${TEST_VASH} -ne ${YENTESTS_TEST_VERSION} ]] ; then
+						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
+						YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
+						if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
 							YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						fi
@@ -237,7 +266,7 @@ function testScript() {
 
 				else  # create a hash log file here
 
-					log "creating hash log file..."
+					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "creating hash log file..."
 
 					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${YENTESTS_HASH_LOG}
@@ -260,8 +289,7 @@ function testScript() {
 		# log the call to the run the test
 		log "${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_HASH}"
 
-		log "here I would actually run a test..."
-		# _testCommand "bash ${YENTESTS_TEST_FILE}"
+		_testCommand "bash ${YENTESTS_TEST_FILE}"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
