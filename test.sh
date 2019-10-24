@@ -49,10 +49,10 @@ function _testCommand() {
 
 	TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp" && mkdir -p ${TMP_LOG_DIR}
     
-	# remove any existing log files set log files
-	rm -f "${TMP_LOG_DIR}/tmp/time.log" > /dev/null
+	# set log files
 	YENTESTS_TEST_TIMELOG="${TMP_LOG_DIR}/time.log"
 	YENTESTS_TEST_OUTLOG="${TMP_LOG_DIR}/output.log"
+	YENTESTS_TEST_ERRLOG="${TMP_LOG_DIR}/error.log"
 
 	# use env var to signal whether to use a timeout
 	if [[ -z ${YENTESTS_TEST_TIMEOUT} ]] ; then
@@ -62,7 +62,7 @@ function _testCommand() {
 
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (without a timeout)... ++" \
-			|| { time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
+			|| { time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
 
 	else # test command with timeout
 
@@ -72,17 +72,25 @@ function _testCommand() {
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++" \
 			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
-					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2>&1 ; }
+					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; }
 
 	fi
 	YENTESTS_TEST_EXITCODE=${?}
 	
 	# check output log and set variable
-	if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
-		YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
-		[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="test output blank"
+	#if [[ -f ${YENTESTS_TEST_OUTLOG} ]] ; then
+	#	YENTESTS_TEST_OUTPUT=$( cat ${YENTESTS_TEST_OUTLOG} )
+	#	[[ -z "$YENTESTS_TEST_OUTPUT" ]] && YENTESTS_TEST_OUTPUT="test output blank"
+	#else 
+	#	YENTESTS_TEST_OUTPUT="no test output"
+	#fi
+
+	# check error log
+	if [[ -f ${YENTESTS_TEST_ERRLOG} ]] ; then
+		YENTESTS_TEST_ERROR=$( cat ${YENTESTS_TEST_ERRLOG} )
+		[[ -z "$YENTESTS_TEST_ERROR" ]] && YENTESTS_TEST_ERROR="stderr blank"
 	else 
-		YENTESTS_TEST_OUTPUT="no test output"
+		YENTESTS_TEST_OUTPUT="test error log not created"
 	fi
 
 	# check time log is not empty and set duration from time log
@@ -99,7 +107,7 @@ function _testCommand() {
 	# check exit code and set success flag
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] && TMP_SUCCESS="S" || TMP_SUCCESS="F"
 
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_NAME},${TMP_SUCCESS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_OUTPUT}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_NAME},${TMP_SUCCESS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -154,6 +162,11 @@ function _testCommand() {
 		fi
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
+
+	# clean up log files
+	for f in ( "time" "output" "error" ) ; do  
+		rm -f "${TMP_LOG_DIR}/${f}.log" > /dev/null
+	done
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
