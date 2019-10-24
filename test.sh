@@ -112,23 +112,33 @@ function _testCommand() {
 
 	#replace spaces in names (and host?) with _ to prevent invalid field format error return from influxdb
 
-	# string we'll want to write to influxdb
-	YENTESTS_INFLUXDB_DATA_TMP="${YENTESTS_INFLUXDB_DB},
-host=${YENTESTS_TEST_HOST},
-test=${YENTESTS_TEST_NAME//[ ]/_},
-code=${YENTESTS_TEST_EXITCODE} 
-xtime=${YENTESTS_TEST_DURATION},
-thash=${YENTESTS_TEST_HASH},
-runid=${YENTESTS_TEST_RUNID} 
-${YENTESTS_TEST_START}"
-	YENTESTS_INFLUXDB_DATA=$( echo ${YENTESTS_INFLUXDB_DATA_TMP} | tr -d '\n' )
+	# string we'll want to write to influxdb... 
+	# 
+	# 	tags: each of these things we might want to search/groupby over and should be indexed
+	# 
+	# 		host - the host the test was run on
+	# 		test - the name of the test
+	# 		hash - the hash of the test run, like a test version number
+	# 		code - the exit code from the test
+	# 
+	# 	fields: these things we might want to plot/aggregate
+	# 
+	#		runid - the runid of the test run (? should this be a tag?)
+	# 		xtime - execution time of the test
+	#		cpu   - (FUTURE) the cpu utilization of the test
+	#		mem   - (FUTURE) the memory utilization of the test
+	#		procs - (FUTURE) the number of processes spun up by the test
+	# 
+	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
+	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
+	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START}"
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		log "to influxdb: ${YENTESTS_INFLUXDB_DATA}"
+		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
-		echo "DEBUGGING: ${YENTESTS_INFLUXDB_DATA}"
-		# curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${YENTESTS_INFLUXDB_DATA}
+		echo "DEBUGGING: ${TMP_INFLUXDB_DATA}"
+		# curl -s -k -X POST "'"${YENTESTS_INFLUXDB_URL}"'" --data-binary ${TMP_INFLUXDB_DATA}
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
