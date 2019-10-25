@@ -14,7 +14,7 @@ Whatever tests are defined are run regularly in a `cron` job on each server. Tes
 * `bash`
 * `sqlite3` software and starter database (if you want to use it)
 * An AWS account, `S3` bucket and write credentials (if you want to use it)
-* A machine/instance/cluster running `influxdb`. 
+* A machine/instance/cluster running `influxdb` (if you want to use it). 
 
 # Installing yentests
 
@@ -160,10 +160,7 @@ The main `test.sh` script will search any _subfolder_ of `tests` and run
 * `tests/*/test.sh` file, if it exists
 * any file matching `tests/*/tests/*.sh`
 
-This way
-
-
-
+This way test "suites" can be collected within such folders. If there is a "main" test, that can be defined in `test.sh`. More detailed tests can be defined in any file in `tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests`. 
 
 # Test Output
 
