@@ -45,10 +45,19 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	YENTESTS_TEST_START=$( date +%s )
+	# get test start time (in a format suitable for influxdb, and for CSV/logging)
+	YENTESTS_TEST_START_S=$( date +%s )
 	YENTESTS_TEST_DATETIME=$( date +"%FT%T.%N" )
+
+	# get and parse CPU/load info
+	TMP_CPU_INFO=$( cat /proc/loadinfo )
+
+	# get and parse mem usage info
+	head -n 3 /proc/meminfo > "${YENTESTS_TMP_LOG_DIR}/mem.log"
+	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
+	TMP_MEM_FREE=$( sed -En 's/^MemFree:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
     
-	# set log files
+	# set temporary log files for catching test run output
 	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
 	YENTESTS_TEST_OUTLOG="${YENTESTS_TMP_LOG_DIR}/output.log"
 	YENTESTS_TEST_ERRLOG="${YENTESTS_TMP_LOG_DIR}/error.log"
@@ -114,7 +123,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	#replace spaces in names (and host?) with _ to prevent invalid field format error return from influxdb
+	# NOTE: replace spaces in names (and host?) with _ to prevent invalid field format error return from influxdb
 
 	# string we'll want to write to influxdb... 
 	# 
@@ -136,10 +145,10 @@ function _testCommand() {
 	# 
 	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
 	[[ ${TMP_PASS} =~ "F" ]] \
-		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
-		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
+		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=t" \
+		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=f"
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
-	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START}"
+	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
@@ -391,6 +400,10 @@ function testScript() {
 # -S: NO sqlite, even if defined
 # 
 
+function unsetEnvVarsMatchingPrefix() {
+	env | grep "^${1}" | awk -F'=' '{ print $2 }' | xargs -i unset {}
+}
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -424,6 +437,31 @@ source /etc/profile.d/lmod.sh
 # 	YENTESTS_INFLUXDB_{HOST,PORT,DB,USER,PWD}						if sending data to influxdb
 # 
 [[ -f .env ]] && set -a && source .env && set +a
+
+# set defaults for those vars that need defaults
+[[ -z ${YENTESTS_TEST_HOST}    ]] && YENTESTS_TEST_HOST=${HOSTNAME}
+[[ -z ${YENTESTS_TEST_LOGS}    ]] && YENTESTS_TEST_LOGS=${PWD}/logs/${YENTESTS_TEST_HOST}
+[[ -z ${YENTESTS_TEST_TIMEOUT} ]] && YENTESTS_TEST_TIMEOUT=60
+[[ -z ${YENTESTS_TEST_RIDF}    ]] && YENTESTS_TEST_RIDF=${YENTESTS_TEST_LOGS}/runid
+[[ -z ${YENTESTS_TEST_RESULTS} ]] && YENTESTS_TEST_RESULTS=${PWD}/results/${YENTESTS_TEST_HOST}
+[[ -z ${YENTESTS_HASH_LOG}     ]] && YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
+
+# parse args AFTER reading .env, to effect overrides
+while getopts "hrdvlwIWS" OPT ; do
+	case "${OPT}" in
+		h) printHelp ; exit 0 ;;
+		r) echo "!" > ${YENTESTS_TEST_RIDF} ;;
+		d) YENTESTS_DRY_RUN=1 ;;
+		v) YENTESTS_VERBOSE_LOGS=1 ;;
+		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
+		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
+		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
+		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1;;
+	esac
+done
+shift ${OPTIND}-1
 
 # make sure log directory(s) exists
 mkdir -p ${YENTESTS_TEST_LOGS}

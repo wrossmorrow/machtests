@@ -218,7 +218,7 @@ Each test will output
 
 A daily results file in `csv` format is created, whose columns are
 ```
-datetime , run id , test name , S/F , exit code , timeout? , duration
+datetime , run id , test name , S/F , exit code , timeout? , duration , cpu (TBD) , mem (TBD)
 ```
 
 ## sqlite
