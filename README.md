@@ -9,7 +9,7 @@
 
 **How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
-### Dependencies
+**Dependencies:** Our tests should be lightweight. We require only
 
 * `bash`
 * `sqlite3` software and starter database (if you want to use it)
@@ -27,10 +27,10 @@ The repo is already cloned and tracked on the `yens` at `/ifs/yentools/yentests`
 If you want to play with the repo outside of the normal location, say in your home folder, you can do 
 
 ```
-~$ git clone --single-branch --branch development git@git.bitbucket.org/circleresearch/yentests
+~$ git clone --single-branch --branch development git@bitbucket.org/circleresearch/yentests
 ```
 
-This will, of course, create and populate a folder `~/yentests`. 
+This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch. 
 
 ## Defining the Environment
 
@@ -153,7 +153,7 @@ You can pass some flags to the script to control its behavior
 -I: Do not send data to influxdb, even if defined
 ```
 
-## What test.sh does
+## What test.sh Does
 
 The main `test.sh` script will search any _subfolder_ of `tests` and run
 
@@ -161,6 +161,30 @@ The main `test.sh` script will search any _subfolder_ of `tests` and run
 * any file matching `tests/*/tests/*.sh`
 
 This way test "suites" can be collected within such folders. If there is a "main" test, that can be defined in `test.sh`. More detailed tests can be defined in any file in `tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests`. 
+
+Of course, `test.sh` has to _literally_ do quite a bit more than this to work correctly. Here are the major components of what the code actually does: 
+
+### Setup Default Testing Environment
+
+Read `.env` and prepare a "default" environment to be loaded for any test in a file `.defaults`. 
+
+### Load Correct Test Environment
+
+Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`. Also, parse the frontmatter of any test script to define or override variables that should be defined for any tests. 
+
+### Run Monitored Tests
+
+Actually run the scripts and monitor relevant system data about those runs. Right now we just store test duration (execution time), but we should also store total/average CPU utilization and maximum memory usage for each test process (and any of its children).  
+
+### Collect and Organize Output
+
+Collect output like monitoring data, test exit code, test success/failure, and any error messages from failures. Organize this output into data structures suitable for loading into storage solutions (both local and remote).
+
+### Load Data in Storage
+
+Manage getting data into any local "databases" (files, `sqlite`) or remote storage (`S3`, `influxdb`). 
+
+---
 
 # Test Output
 
@@ -172,7 +196,9 @@ Each test will output
     2. Exit Code
         1. 0 is command successfully executed
         2. Non-0 will be an error
-    3. Execution time in seconds
+    3. Whether test timed out (0/1)
+    4. Execution time in seconds
+    5. any error messages
 3. Indicator the test record was stored in the database both Sqlite and InfluxDB
 
 ## Logs
@@ -192,6 +218,7 @@ If credentials and settings are provided, upload the `csv` data to `S3`.
 ## influxdb
 
 
+---
 
 # Changing or Contributing Tests
 
@@ -209,6 +236,7 @@ Our intent is that writing tests should be easy. All you should really know how 
 ## Incorporating Your Changes
 
 
+---
 
 # Test Monitoring
 
