@@ -1,32 +1,77 @@
+
 # Yen Tests
 
-Test the software packages, software package setup prerequisite, local server and network file systems on the Stanford Yen servers.
-The script is run in cronjob on each seaver and test results are logged to sqlite and InfluxDB which is part of the TICK stack and monitored in a Chronograph dashboard.
+Run easily maintanable and etensible collections of test scripts on the `yen` servers. 
 
-### Prerequisites
+The broad purpose of the tests is to test availability of software packages, software package setups (`module load`), local server and network file systems on the Stanford Yen servers. There are also some basic task executions as tests. 
 
-Unix Bash
-[Unix Module Enviroment Software](http://modules.sourceforge.net/)
-Module System Setup Profile at ***/etc/profile.d/lmod.sh***
+The system is designed so that you don't need to know how the tests are actually run to write a test. You just need to know what you want to test and package that in a `bash` script. Our hope is that this makes contribution and debugging of tests easy. 
 
-Sqlite3 software and starter database
+The tests are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb`. Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`. We use `kapacitor`. 
 
-InfluxDB where results are written using POST verb in CURL command
+### Dependencies
 
+* `bash`
+* `sqlite3` software and starter database (if you want to use it)
+* An AWS account, `S3` bucket and write credentials (if you want to use it)
+* A machine/instance/cluster running `influxdb`. 
 
-### Installing
+# Installing yentests
 
-Pull the repo from Bitbucket
+## Getting the Code
 
-Create the sqlite database and tables using a script
+Clone the repo from Bitbucket, as usual. 
+
+The repo is already cloned and tracked on the `yens` at `/ifs/yentools/yentests`. 
+
+If you want to play with the repo outside of the normal location, say in your home folder, you can do 
+
 ```
-$ cd <yentests home>/db_scripts
+~$ git clone --single-branch --branch development git@git.bitbucket.org/circleresearch/yentests
+```
+
+This will, of course, create and populate a folder `~/yentests`. 
+
+## Defining the Environment
+
+We use a `.env` file to define key data needed by the actual test script. A template is provided as `.env.template`, because you shouldn't track the `.env` file. It will have secrets you need to leave out of version control. 
+
+Here's a quick list of the variables you can define in `.env`: 
+
+```
+YENTESTS_TEST_LOGS=
+YENTESTS_TEST_HOST=
+YENTESTS_TEST_RIDF=
+YENTESTS_TEST_TIMEOUT=
+YENTESTS_TEST_RESULTS=
+YENTESTS_HASH_LOG=
+YENTESTS_RUN_LOG=
+YENTESTS_SQLITE_DB=
+YENTESTS_SQLITE_FILE=
+YENTESTS_S3_ACCESS_KEY_ID=
+YENTESTS_S3_SECRET_ACCESS_KEY=
+YENTESTS_S3_BUCKET=
+YENTESTS_S3_PREFIX=
+YENTESTS_INFLUXDB_HOST=
+YENTESTS_INFLUXDB_PORT=
+YENTESTS_INFLUXDB_DB=
+YENTESTS_INFLUXDB_USER=
+YENTESTS_INFLUXDB_PWD=
+```
+
+See the comments in `.env.template` for more information. 
+
+## Creating the sqlite3 database
+
+Create the `sqlite` database and tables using a script
+```
+$ cd ${YENTESTS_TEST_HOME}/db_scripts
 $ ./create_db.sh
 ```
 
 Check the sqlite database file exists
 ```
-$ cd <yentests home>/db_scripts
+$ cd ${YENTESTS_TEST_HOME}/db_scripts
 $ ls -1 yentests.db
 yentests.db
 ```
@@ -60,7 +105,8 @@ CREATE TABLE test_results (
 sqlite> .exit
 ```
 
-Installing CRON jobs
+## Installing yentests as a cron job
+
 Setup a CRON job to run the tests each hour on each Yen server.  Setup a different run schedule to prevent overlap with the same job on a different server to prevent tests accessing the sqlite database simultaneously which will cause an access error because sqlite is single threaded.
 Set the enviroment in the crontab below
 ```
@@ -81,13 +127,48 @@ PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
 Yen 3 is setup to run at 30 min and Yen 4 at 45 min.
 ```
 
-## Running the tests
 
-Run the test.sh script in the yentests folder.  The test script will look for and run the test.sh file in each sub-folder which is a specific test.
-At the beginning of the test, a test record id will be generated which links all the tests in that run in the database.
-The specifics of each test will be in the **test.sh** file in the different sub-folders.
+
+# About
+
+## Running By Hand
+
+You can run the `yentests` by hand by running the `test.sh` script in the `/ifs/yentools/yentests` folder: 
+
+```
+$ cd /ifs/yentools/yentests && ./test.sh
+```
+
+You can pass some flags to the script to control its behavior
+
+``` 
+-h: print help and exit
+-r: reset run ids
+-d: dryrun tests; that is, just setup for each test but don't actually run any of them
+-v: make verbose prints to the logs
+-l: "local only", meaning no S3 or influxdb (even if defined)
+-w: "web only", meaning no sqlite (even if defined)
+-S: Do not write data to sqlite, even if defined
+-A: Do not send data to S3, even if defined
+-I: Do not send data to influxdb, even if defined
+```
+
+## What test.sh does
+
+The main `test.sh` script will search any _subfolder_ of `tests` and run
+
+* `tests/*/test.sh` file, if it exists
+* any file matching `tests/*/tests/*.sh`
+
+This way
+
+
+
+
+# Test Output
 
 Each test will output
+
 1. Folder location of the test
 2. Command being tested
     1. execution status : SUCCESS or FAILURE
@@ -97,64 +178,58 @@ Each test will output
     3. Execution time in seconds
 3. Indicator the test record was stored in the database both Sqlite and InfluxDB
 
+## Logs
+
+A daily results file in `csv` format is created, whose columns are
 ```
-fevalle@yen1:/ifs/yentools/yentests$ ./test.sh
-Test Record ID = 536
-
-R/
-Testing: module load R ==> SUCCESS | 0 | 0.13 sec
-storeTestRecord
-Testing: Rscript /usr/local/ifs/yentools/yentests/R/test.r ==> SUCCESS | 0 | 0.75 sec
-storeTestRecord
-
-db_scripts/
-
-gurobi/
-Testing: module load gurobi ==> SUCCESS | 0 | 0.07 sec
-storeTestRecord
-Testing: /software/non-free/Gurobi/gurobi801/linux64/bin/gurobi.sh /usr/local/ifs/yentools/yentests/gurobi/test.py ==> SUCCESS | 0 | 2.50 sec
-storeTestRecord
-
-isilon/
-Testing: ls -l /ifs/yentools/yentests/isilon ==> SUCCESS | 0 | 0.59 sec
-storeTestRecord
-
-julia/
-Testing: module load julia ==> SUCCESS | 0 | 0.05 sec
-storeTestRecord
-Testing: julia -e "exit()" ==> SUCCESS | 0 | 0.27 sec
-storeTestRecord
-
-local_server_folder/
-Testing: ls -la /tmp ==> SUCCESS | 0 | 0.01 sec
-storeTestRecord
-
-mathematica/
-Testing: module load mathematica ==> SUCCESS | 0 | 0.05 sec
-storeTestRecord
-Testing: wolframscript -script /usr/local/ifs/yentools/yentests/mathematica/test.m ==> SUCCESS | 0 | 1.57 sec
-storeTestRecord
-
-matlab/
-Testing: module load matlab ==> SUCCESS | 0 | 0.05 sec
-storeTestRecord
-Testing: matlab -nodisplay -nosplash -nodesktop -batch "exit" ==> SUCCESS | 0 | 23.59 sec
-storeTestRecord
-
-stata-mp/
-Testing: module load statamp ==> SUCCESS | 0 | 0.05 sec
-storeTestRecord
-Testing: stata-mp -b /usr/local/ifs/yentools/yentests/stata-mp/test.do ==> SUCCESS | 0 | 0.07 sec
-storeTestRecord
-
-stata-se/
-Testing: module load statase ==> SUCCESS | 0 | 0.06 sec
-storeTestRecord
-Testing: stata-se -b /usr/local/ifs/yentools/yentests/stata-se/test.do ==> SUCCESS | 0 | 0.20 sec
-storeTestRecord
-fevalle@yen1:/ifs/yentools/yentests$
-
+datetime , run id , test name , S/F , exit code , timeout? , duration
 ```
 
-## Dashboard Test Monitoring
-A Chronograph dashboard called [Yen Test](http://monitor.gsbrss.com:8888/sources/1/dashboards/9?lower=now%28%29%20-%2012h) monitors the tests on each server.  Any results displayed in the graph are errors and should be investigated.
+## sqlite
+
+
+## AWS S3
+
+If credentials and settings are provided, upload the `csv` data to `S3`. 
+
+## influxdb
+
+
+
+# Changing or Contributing Tests
+
+Our intent is that writing tests should be easy. All you should really know how to do is write a script (on top of how to use `git` that is). 
+
+## An Example
+
+
+## Placement
+
+
+## Frontmatter
+
+
+## Incorporating Your Changes
+
+
+
+# Test Monitoring
+
+## Dashboard
+
+A Chronograph dashboard called [Yen Test](http://monitor.gsbrss.com:8888/sources/1/dashboards/9?lower=now%28%29%20-%2012h) monitors the tests on each server. Any results displayed in the graph are errors and should be investigated.
+
+## Alerts
+
+We use `kapacitor` for alerting. 
+
+
+
+# Contact
+
+You can contact the DARC team [via email](gsb_darcresearch@stanford.edu). 
+
+Authors: 
+
+* Ferdi Evalle 
+* [W. Ross Morrow](morrowwr@stanford.edu)

@@ -330,12 +330,12 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		log "starting ${YENTESTS_TEST_NAME}" 
+		log "starting \"${YENTESTS_TEST_NAME}\"" 
 
 		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
 
-		log "finished ${YENTESTS_TEST_NAME}"
+		log "finished \"${YENTESTS_TEST_NAME}\""
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -373,9 +373,16 @@ function testScript() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+# 
 # -r: reset run ids
-# -d: dryrun tests
+# -d: dryrun tests; that is, just setup for each test but don't actually run any of them
 # -v: use verbose prints to the logs
+# -l: "local only", meaning no S3 or influxdb (even if defined)
+# -w: "web only", meaning no sqlite (even if defined)
+# -I: NO influxdb, even if defined
+# -W: NO S3, even if defined
+# -S: NO sqlite, even if defined
+# 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -403,11 +410,11 @@ source /etc/profile.d/lmod.sh
 # 
 # We'll expect
 # 
-# 	YENTESTS_TEST_{HOME,LOGS,HOST,RIDF,TIMEOUT} (HOME defined above though...)
-# 	YENTESTS_HASH_LOG
-# 	YENTESTS_RUN_LOG
-# 	YENTESTS_SQLITE_{DB,FILE}
-# 	YENTESTS_INFLUXDB_{HOST,PORT,DB,USER,PWD}
+# 	YENTESTS_TEST_{LOGS,HOST,RIDF,RESULTS,TIMEOUT}
+# 	YENTESTS_{HASH,RUN}_LOG
+# 	YENTESTS_SQLITE_{DB,FILE} 										if storing in a local sqlite database
+# 	YENTESTS_S3_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,BUCKET,PREFIX} 	if dumping to S3
+# 	YENTESTS_INFLUXDB_{HOST,PORT,DB,USER,PWD}						if sending data to influxdb
 # 
 [[ -f .env ]] && set -a && source .env && set +a
 
