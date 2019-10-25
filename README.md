@@ -1,13 +1,13 @@
 
 # Yen Tests
 
-*Purpose:* Run easily maintanable and etensible collections of test scripts on the `yen` servers. 
+**Purpose:** Run easily maintanable and etensible collections of test scripts on the `yen` servers. 
 
-*The Why:* The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. There are also some basic task executions as tests. A _proactive_ assessment allows us to not only better understand our computing systems, but also to take action ahead of recieving user complaints. 
+**The Why:** The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. There are also some basic task executions as tests. A _proactive_ assessment allows us to not only better understand our computing systems, but also to take action ahead of recieving user complaints. 
 
-*Contributing:* Our testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script. Our hope is that this makes contribution, maintenance, and debugging of tests easy. 
+**Contributing:** Our testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script. Our hope is that this makes contribution, maintenance, and debugging of tests easy. 
 
-*How Tests Run:* Whatever tests are defined are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
+**How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
 ### Dependencies
 
