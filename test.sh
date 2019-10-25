@@ -338,7 +338,7 @@ function testScript() {
 		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
 
-		log "finished \"${YENTESTS_TEST_NAME}\""
+		log "finished \"${YENTESTS_TEST_NAME}\" (${TMP_PASS})"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
