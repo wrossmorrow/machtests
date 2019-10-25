@@ -50,7 +50,12 @@ function _testCommand() {
 	YENTESTS_TEST_DATETIME=$( date +"%FT%T.%N" )
 
 	# get and parse CPU/load info
-	TMP_CPU_INFO=$( cat /proc/loadinfo )
+	TMP_CPU_INFO=$( cat /proc/loadavg )
+	TMP_CPU_INFO_05=$( echo ${TMP_CPU_INFO} | awk '{ print $1 }' )
+	TMP_CPU_INFO_10=$( echo ${TMP_CPU_INFO} | awk '{ print $2 }' )
+	TMP_CPU_INFO_15=$( echo ${TMP_CPU_INFO} | awk '{ print $3 }' )
+	TMP_PROC_INFO_R=$( echo ${TMP_CPU_INFO} | awk '{ print $4 }' | awk -F'/' '{ print $1 }' )
+	TMP_PROC_INFO_N=$( echo ${TMP_CPU_INFO} | awk '{ print $4 }' | awk -F'/' '{ print $2 }' )
 
 	# get and parse mem usage info
 	head -n 3 /proc/meminfo > "${YENTESTS_TMP_LOG_DIR}/mem.log"
@@ -107,7 +112,12 @@ function _testCommand() {
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
 		&& TMP_PASS="P" || TMP_PASS="F"
 
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${TMP_PASS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
+	# prepare (csv) status line
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${TMP_PASS}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
