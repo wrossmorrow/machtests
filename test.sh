@@ -128,7 +128,7 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
+		log "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
 	else 
 		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TEST_RESULTS}
 	fi
