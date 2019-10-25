@@ -62,8 +62,6 @@ function _testCommand() {
 	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_USED=$(( TMP_MEM_TOTAL - TMP_MEM_AVAIL ))
-
-	echo "memory: ${TMP_MEM_AVAIL},${TMP_MEM_USED}"
     
 	# set temporary log files for catching test run output
 	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
@@ -120,6 +118,7 @@ function _testCommand() {
 	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
 	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
+	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_MEM_USED},${TMP_MEM_AVAIL}"
 	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -169,8 +168,10 @@ function _testCommand() {
 	# 
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
+	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memused=${TMP_MEM_USED},memavail=${TMP_MEM_AVAIL}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
 
+	# construct LPF string
 	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 	# post data to the yentests database in InfluxDB
@@ -183,7 +184,7 @@ function _testCommand() {
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
 				&& cat ${TMP_LOG_DIR}/curl.log
-		else 
+		else
 			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "wrote test summary data to influxdb"
 		fi
