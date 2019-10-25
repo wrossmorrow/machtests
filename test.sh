@@ -60,7 +60,10 @@ function _testCommand() {
 	# get and parse mem usage info
 	head -n 3 /proc/meminfo > "${YENTESTS_TMP_LOG_DIR}/mem.log"
 	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
-	TMP_MEM_FREE=$( sed -En 's/^MemFree:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
+	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
+	TMP_MEM_USED=$(( TMP_MEM_TOTAL - TMP_MEM_AVAIL ))
+
+	echo "memory: ${TMP_MEM_AVAIL},${TMP_MEM_USED}"
     
 	# set temporary log files for catching test run output
 	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
@@ -144,20 +147,30 @@ function _testCommand() {
 	# 		hash - the hash of the test run, like a test version number
 	# 		code - the exit code from the test
 	#		fail - a simple flag to check failure
+	# 		runid? currently a field
 	# 
-	# 	fields: these things we might want to plot/aggregate
-	# 
-	#		runid - the runid of the test run (? should this be a tag?)
-	# 		xtime - execution time of the test
-	#		cpu   - (FUTURE) the cpu utilization of the test
-	#		mem   - (FUTURE) the memory utilization of the test
-	#		procs - (FUTURE) the number of processes spun up by the test
-	# 
-	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
+	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
+	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
 	[[ ${TMP_PASS} =~ "F" ]] \
 		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=t" \
 		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=f"
+
+	# 	fields: these things we might want to plot/aggregate
+	# 
+	#		runid  - the runid of the test run (? should this be a tag?)
+	# 		xtime  - execution time of the test
+	#		cpu    - (FUTURE) the cpu utilization of the test
+	#		mem    - (FUTURE) the memory utilization of the test
+	# 		cpu05  - 
+	# 		cpu10  - 
+	# 		cpu15  - 
+	#		rprocs - the number of processes currently running (<= # cpus)
+	#		nprocs - the number of processes currently defined
+	# 
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
+	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
+	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
+
 	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 	# post data to the yentests database in InfluxDB
