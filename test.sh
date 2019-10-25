@@ -99,10 +99,10 @@ function _testCommand() {
 	# check time log is not empty and set duration from time log
 	if [[ -f ${YENTESTS_TEST_TIMELOG} && -s ${YENTESTS_TEST_TIMELOG} ]]; then
 		YENTESTS_TEST_DURATION=$( egrep -i '^real' ${YENTESTS_TEST_TIMELOG} | awk '{ print $2 }' )
-		TMP_TEST_TIMEDOUT='t'
+		TMP_TEST_TIMEDOUT='false'
 	else # time log doesn't exist or is empty; means the command timed out
 		YENTESTS_TEST_DURATION=${YENTESTS_TEST_TIMEOUT}
-		TMP_TEST_TIMEDOUT='f'
+		TMP_TEST_TIMEDOUT='true'
 	fi
 	# set a min value for time so the record can be caught by the kapacitor alert
 	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.01
@@ -153,8 +153,8 @@ function _testCommand() {
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
 	[[ ${TMP_PASS} =~ "F" ]] \
-		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=t" \
-		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=f"
+		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
+		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
 
 
 	# 	fields: these things we might want to plot/aggregate
