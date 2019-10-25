@@ -241,10 +241,14 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
     * `tver`: declared version number of the test
     * `host`: machine test was run on
     * `fail`: boolean taking the value "true" if the test failed
+    * `tout`: boolean taking the value "true" if the test timed out
     * `code`: integer exit code for the test
 * Fields: 
     * `runid`: the test run index (for that machine)
     * `xtime`: the test's execution time
+    * `cpu05`, `cpu10`, `cpu15`: the 5-, 10-, and 15-minute averaged CPU utilization on the system when the test started
+    * `memu`, `mema`: the used and available memory (RAM and swap) when the test started
+    * `rprocs`, `nprocs`: the number of running and total processes when the test started
 *  `time`: the _start_ time of the test, at second precision
 
 ---

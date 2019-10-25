@@ -99,10 +99,10 @@ function _testCommand() {
 	# check time log is not empty and set duration from time log
 	if [[ -f ${YENTESTS_TEST_TIMELOG} && -s ${YENTESTS_TEST_TIMELOG} ]]; then
 		YENTESTS_TEST_DURATION=$( egrep -i '^real' ${YENTESTS_TEST_TIMELOG} | awk '{ print $2 }' )
-		TMP_TEST_TIMEDOUT=0
+		TMP_TEST_TIMEDOUT='t'
 	else # time log doesn't exist or is empty; means the command timed out
 		YENTESTS_TEST_DURATION=${YENTESTS_TEST_TIMEOUT}
-		TMP_TEST_TIMEDOUT=1
+		TMP_TEST_TIMEDOUT='f'
 	fi
 	# set a min value for time so the record can be caught by the kapacitor alert
 	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.01
@@ -146,13 +146,16 @@ function _testCommand() {
 	# 		hash - the hash of the test run, like a test version number
 	# 		code - the exit code from the test
 	#		fail - a simple flag to check failure
+	#		tout - flag for timeout
 	# 		runid? currently a field
 	# 
 	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
-	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
+	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
+	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
 	[[ ${TMP_PASS} =~ "F" ]] \
 		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=t" \
 		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=f"
+
 
 	# 	fields: these things we might want to plot/aggregate
 	# 
@@ -168,7 +171,7 @@ function _testCommand() {
 	# 
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
-	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memused=${TMP_MEM_USED},memavail=${TMP_MEM_AVAIL}"
+	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memu=${TMP_MEM_USED},mema=${TMP_MEM_AVAIL}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
 
 	# construct LPF string
