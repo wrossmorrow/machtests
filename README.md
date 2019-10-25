@@ -20,9 +20,7 @@
 
 ## Getting the Code
 
-Clone the repo from Bitbucket, as usual. 
-
-The repo is already cloned and tracked on the `yens` at `/ifs/yentools/yentests`. 
+Clone the repo from Bitbucket, as usual. **Note:** the repo is already cloned and tracked on the `yens` at `/ifs/yentools/yentests`. 
 
 If you want to play with the repo outside of the normal location, say in your home folder, you can do 
 
@@ -105,31 +103,43 @@ CREATE TABLE test_results (
 sqlite> .exit
 ```
 
-## Installing yentests as a cron job
+## Installing yentests as a cron Job
 
-Setup a CRON job to run the tests each hour on each Yen server.  Setup a different run schedule to prevent overlap with the same job on a different server to prevent tests accessing the sqlite database simultaneously which will cause an access error because sqlite is single threaded.
-Set the enviroment in the crontab below
+Setup a `cron` job to run the tests each hour on each `yen` server.  Setup a different run schedule to prevent overlap with the same job on a different server to prevent tests accessing the `sqlite` database simultaneously which will cause an access error because `sqlite` is single threaded.
+
+Set the enviroment in the `crontab` below. 
+
+For example, tests on `yen1` starts at 0 minute mark of each hour
+
 ```
-For example, tests on Yen1 starts at 0 minute mark of each hour
 $ crontab -e
 MAILTO=""
 SHELL=/bin/bash
 PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/ifs/yentools/bin
 0 */1 * * * /ifs/yentools/yentests/test.sh
+```
 
-For example, tests on Yen2 starts at the 15 minute mark of each hour
+For example, tests on `yen2` starts at the 15 minute mark of each hour
+
+```
 $ crontab -e
 MAILTO=""
 SHELL=/bin/bash
 PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/ifs/yentools/bin
 15 */1 * * * /ifs/yentools/yentests/test.sh
-
-Yen 3 is setup to run at 30 min and Yen 4 at 45 min.
 ```
 
+`yen3` is setup to run at 30 min and `yen4` at 45 min.
+
+## Installing yentests as a Scheduled systemd Unit
+
+TBD
+
+--- 
+
+# Test Infrastructure
 
 
-# About
 
 ## Running By Hand
 
@@ -203,6 +213,9 @@ Each test will output
 
 ## Logs
 
+
+## Results
+
 A daily results file in `csv` format is created, whose columns are
 ```
 datetime , run id , test name , S/F , exit code , timeout? , duration
@@ -211,12 +224,28 @@ datetime , run id , test name , S/F , exit code , timeout? , duration
 ## sqlite
 
 
+
 ## AWS S3
 
 If credentials and settings are provided, upload the `csv` data to `S3`. 
 
 ## influxdb
 
+Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.gsbdarc.com`. Specifically: 
+
+* Database: `yentests`
+* Mesurement: `yentests`
+* Tags: 
+    * `test`: name of the test script
+    * `hash`: `SHA256` hash of the test script
+    * `tver`: declared version number of the test
+    * `host`: machine test was run on
+    * `fail`: boolean taking the value "true" if the test failed
+    * `code`: integer exit code for the test
+* Fields: 
+    * `runid`: the test run index (for that machine)
+    * `xtime`: the test's execution time
+*  `time`: the _start_ time of the test, at second precision
 
 ---
 
