@@ -5,9 +5,9 @@ Run easily maintanable and etensible collections of test scripts on the `yen` se
 
 The broad purpose of the tests is to test availability of software packages, software package setups (`module load`), local server and network file systems on the Stanford Yen servers. There are also some basic task executions as tests. 
 
-The system is designed so that you don't need to know how the tests are actually run to write a test. You just need to know what you want to test and package that in a `bash` script. Our hope is that this makes contribution and debugging of tests easy. 
+The system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script. Our hope is that this makes contribution, maintenance, and debugging of tests easy. 
 
-The tests are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb`. Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`. We use `kapacitor`. 
+Whatever tests are defined are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
 ### Dependencies
 
