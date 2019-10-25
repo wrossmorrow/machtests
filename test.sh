@@ -92,8 +92,11 @@ function _testCommand() {
 	# set a min value for time so the record can be caught by the kapacitor alert
 	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.01
 
-	# check exit code and set success flag
-	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] && TMP_PASS="P" || TMP_PASS="F"
+	# check exit code and set success flag 
+	# 
+	# This could be customized to other exit codes...
+	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
+		&& TMP_PASS="P" || TMP_PASS="F"
 
 	YENTESTS_TEST_STATUS="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${TMP_PASS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 
@@ -121,6 +124,7 @@ function _testCommand() {
 	# 		test - the name of the test
 	# 		hash - the hash of the test run, like a test version number
 	# 		code - the exit code from the test
+	#		fail - a simple flag to check failure
 	# 
 	# 	fields: these things we might want to plot/aggregate
 	# 
@@ -131,7 +135,7 @@ function _testCommand() {
 	#		procs - (FUTURE) the number of processes spun up by the test
 	# 
 	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH},code=${YENTESTS_TEST_EXITCODE}"
-	[[ ${TMP_PASS} -eq 'F' ]] \
+	[[ ${TMP_PASS} =~ "F" ]] \
 		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
 		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
