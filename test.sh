@@ -488,7 +488,7 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		log "starting \"${YENTESTS_TEST_NAME}\"" 
+		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE})" 
 
 		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
