@@ -333,7 +333,7 @@ function testScript() {
 				grep -vxFf .env-global .env-local > .env-changes
 
 				# cat ${_YENTESTS_TEST_HOME}/.defaults
-				cat .env-changes
+				# cat .env-changes
 
 				# ok, so if a variable exists in .env-changes and it...
 				# 
@@ -350,7 +350,9 @@ function testScript() {
 				cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
 				cat .env-global  | grep -f .env-changed-vars >> .env-revert
 
+				printf "\nchanges to clean up in the environment: "
 				cat .env-revert
+				printf "\n" 
 
 				# we clean up from all this later with "rm .env-*"
 
