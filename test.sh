@@ -577,6 +577,7 @@ function runTestSuite() {
 
 			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
 			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
+			printf "\n"
 
 		done
 
