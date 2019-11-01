@@ -606,17 +606,16 @@ Options with arguments:
 while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
-		r) echo "!" > ${YENTESTS_TEST_RIDF} ;;
+		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
-		t) YENTESTS_TEST_LIST=${OPTARG} ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
 		t) log "listing tests... ${OPTARG}" ;; 
-		R) echo "reset-set runid... ${OPTARG}" ;; 
+		R) [[ ${OPTARG} =~ ^[0-9]+$ ]] && echo "${OPTARG}" > ${YENTESTS_TEST_RIDF} ;;
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
 done
