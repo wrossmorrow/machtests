@@ -696,8 +696,8 @@ for d in tests/*/ ; do
 
 	# if passed a list, only run tests in that list
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
-		echo ${TEST_SUITE_DIR}
 		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
+		echo "${d}:: ${TEST_SUITE_DIR}"
 		while read LI ; do 
 			echo "  ${LI}"
 			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then 
