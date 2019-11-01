@@ -615,7 +615,7 @@ while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) YENTESTS_TEST_LIST && log "listing tests... ${OPTARG}" ;; 
+		t) log "listing tests... ${OPTARG}" ;; 
 		R) echo "reset-set runid... ${OPTARG}" ;; 
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
