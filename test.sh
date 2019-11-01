@@ -334,6 +334,10 @@ function testScript() {
 
 				# we clean up from all this later with "rm .env-*"
 
+			else 
+
+				log "No .env file"
+
 			fi
 
 			# strip PWD (not FULL path, just PWD) from filename, if it was passed
