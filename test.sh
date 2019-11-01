@@ -577,12 +577,12 @@ function runTestSuite() {
 		# setup "todo" file
 		> ${_YENTESTS_TESTS_TODO_FILE}
 		TMP_TEST_COUNT=0
-		for t in tests/*.sh ; do
-			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${t} )
+		for T in tests/*.sh ; do
+			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${T} )
 			if [[ -z ${TMP_TEST_NAME} ]] ; then 
-				TMP_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${t}
+				TMP_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${T}
 			fi
-			echo "${t},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${_YENTESTS_TESTS_TODO_FILE}
+			echo "${T},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${_YENTESTS_TESTS_TODO_FILE}
 			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
@@ -591,11 +591,13 @@ function runTestSuite() {
 		#	cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1
 		# done
 
-		for t in tests/*.sh ; do 
+		for T in tests/*.sh ; do 
 
-			cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1
+			while read S ; do 
+				echo "${S}"
+			done < <( cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1 )
 
-			testScript ${t}
+			testScript ${T}
 
 			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
 			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
