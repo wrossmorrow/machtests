@@ -312,6 +312,8 @@ function testScript() {
 				env > .env-local
 				grep -vxFf .env-global .env-local > .env-changes
 
+				cat .env-changes
+
 				# ok, so if a variable exists in .env-changes and it...
 				# 
 				# 	does NOT exist in .env-global, we should unset it when done
