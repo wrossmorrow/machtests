@@ -587,7 +587,14 @@ function runTestSuite() {
 		done
 
 		# run through tests
+		#while [ 1 ] ; do 
+		#	cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1
+		# done
+
 		for t in tests/*.sh ; do 
+
+			cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1
+
 			testScript ${t}
 
 			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
