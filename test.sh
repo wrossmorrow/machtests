@@ -293,15 +293,15 @@ function testCommand() {
 function exitTestScript() {
 
 	# modify "todo" file by deleting matching line for this test
-	if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
+	if [[ -f ${_YENTESTS_TESTS_TODO_FILE} ]] ; then 
 		TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
-		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
-		rm ${YENTESTS_TESTS_TODO_FILE}.bak
+		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${_YENTESTS_TESTS_TODO_FILE}
+		rm ${_YENTESTS_TESTS_TODO_FILE}.bak
 	fi
 
 	# append information to "done" file
-	if [[ -f ${YENTESTS_TESTS_DONE_FILE} ]] ; then 
-		echo "${YENTESTS_TEST_FILE},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TESTS_DONE_FILE}
+	if [[ -f ${_YENTESTS_TESTS_DONE_FILE} ]] ; then 
+		echo "${YENTESTS_TEST_FILE},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${_YENTESTS_TESTS_DONE_FILE}
 	fi
 
 	# clean up customized environment
@@ -557,17 +557,17 @@ function runTestSuite() {
 	if [[ -d tests ]] ; then 
 
 		# empty "done" file
-		> ${YENTESTS_TESTS_DONE_FILE}
+		> ${_YENTESTS_TESTS_DONE_FILE}
 		
 		# setup "todo" file
-		> ${YENTESTS_TESTS_TODO_FILE}
+		> ${_YENTESTS_TESTS_TODO_FILE}
 		TMP_TEST_COUNT=0
 		for t in tests/*.sh ; do
 			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${t} )
 			if [[ -z ${TMP_TEST_NAME} ]] ; then 
 				TMP_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${t}
 			fi
-			echo "${t},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${YENTESTS_TESTS_TODO_FILE}
+			echo "${t},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${_YENTESTS_TESTS_TODO_FILE}
 			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
@@ -575,12 +575,14 @@ function runTestSuite() {
 		for t in tests/*.sh ; do 
 			testScript ${t}
 
-			printf "\ndone file: \n" && cat ${YENTESTS_TESTS_DONE_FILE}
-			printf "\ntodo file: \n" && cat ${YENTESTS_TESTS_TODO_FILE}
+			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
+			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
 
 		done
 
-		rm ${YENTESTS_TESTS_TODO_FILE} ${YENTESTS_TESTS_DONE_FILE}
+		# clean up 
+		rm ${_YENTESTS_TESTS_TODO_FILE} ${_YENTESTS_TESTS_DONE_FILE}
+
 	fi
 	
 	# leave the test suite directory by returning to the working directory for all tests
@@ -752,14 +754,14 @@ if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then
 fi
 
 # define "todo" file, if not customized
-[[ -z ${YENTESTS_TESTS_TODO_FILE} ]] \
-	&& YENTESTS_TESTS_TODO_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo
-export YENTESTS_TESTS_TODO_FILE
+[[ -n ${YENTESTS_TESTS_TODO_FILE} ]] \
+	&& export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TESTS_TODO_FILE}
+	|| export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo
 
 # define "done" file, if not customized
-[[ -z ${YENTESTS_TESTS_DONE_FILE} ]] \
-	&& YENTESTS_TESTS_DONE_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done
-export YENTESTS_TESTS_DONE_FILE
+[[ -n ${YENTESTS_TESTS_DONE_FILE} ]] \
+	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE}
+	|| export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -811,8 +813,8 @@ done
 # don't need .defaults anymore
 rm .defaults > /dev/null
 
-# don't need this in the environment anymore
-unset _YENTESTS_TEST_HOME
+# don't need the "global" environment variables (_YENTESTS_*) anymore
+while read V ; do unset $V ; done < <( env | grep '^_YENTESTS_' | awk -F'=' '{ print $1 }' )
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
