@@ -622,7 +622,7 @@ while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
 done
-shift ${OPTIND}-1
+shift $(( ${OPTIND} - 1 ))
 
 # make sure log directory(s) exists
 mkdir -p ${YENTESTS_TEST_LOGS}
