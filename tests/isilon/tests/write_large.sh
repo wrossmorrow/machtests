@@ -1,8 +1,8 @@
 #!/bin/bash
 # 
-# @name read ifs large
+# @name write ifs large
 # @description Read a "large" file from ifs, copying it to local disk
-# @skip 3
+# @skip 0.25
 # @version 1 
 # @after read ifs large
 # 

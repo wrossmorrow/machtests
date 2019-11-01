@@ -316,6 +316,15 @@ function testScript() {
 				sed -En 's|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|\0|p' ${YENTESTS_TEST_FILE}
 			fi
 
+			# define (and export) the test's name, as extracted from the script's frontmatter
+			# or... provided in the environment? environment might not guarantee uniqueness. 
+			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
+				YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
+				if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
+					YENTESTS_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
+				fi
+			fi
+
 			# parse out any prerequisites from frontmatter... 
 			AFTERLINE=$( sed -En 's|^[ ]*#[ ]*@after (.*)$|\1|p;/^[ ]*#[ ]*@after /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${AFTERLINE} ]] ; then
@@ -326,28 +335,31 @@ function testScript() {
 			fi
 
 			# off-cycle or randomly executed? 
-			TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+).*|\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+			TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+).*,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${TMPLINE} ]] ; then
+				log "skip defined in \"${YENTESTS_TEST_NAME}\""
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
-					echo "would skip based on probability... "
+					TMPLINE=$( python -c "from random import random; print( random() > ${TMPLINE} )" )
+					if [[ ${TMPLINE} =~ True ]] ; then 
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
+						exit
+					fi 
 				else 
-					echo "would skip based on cycle, defined by RUNID"
 					# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
-					[[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] && exit
+					if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
+						exit
+					else 
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by YENTESTS_TEST_RUNID."
+					fi
 				fi
 			else 
-				TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+				TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\0|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 				[[ -n ${TMPLINE} ]] && [[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 					&& log "@skip provided in frontmatter but seems to be malformed..."
-			fi
-
-			# define (and export) the test's name, as extracted from the script's frontmatter
-			# or... provided in the environment? environment might not guarantee uniqueness. 
-			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-				YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
-				if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-					YENTESTS_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
-				fi
 			fi
 
 			# define test version (with a default)
@@ -570,26 +582,32 @@ source /etc/profile.d/lmod.sh
 YENTESTS_HELP_STRING="YENTESTS - infrastructure for running regular tests on the 
 GSB's yen research computing servers. 
 
-	h    - print this message and exit. 
-	r    - reset locally-stored, monotonic run index. use with caution. 
-	d    - do a dry-run; that is, don't actually run any tests themselves
-	v    - print verbose logs for the tester
-	t () - specific list of test folders to run (comma separated, regex style)
-	l    - store local results only (always configured)
-	s    - store ONLY sqlite3 results (if configured)
-	i    - store ONLY influxdb results (if configured)
-	w    - store ONLY S3 results (if configured)
-	L    - do NOT store local results (delete after completion)
-	S    - do NOT store results in sqlite3 (even if configured)
-	I    - do NOT store results in influxdb (even if configured)
-	W    - do NOT store results in S3 (even if configured)
+Option flags: 
+
+	h - print this message and exit. 
+	r - reset locally-stored, monotonic run index. use with caution. 
+	d - do a dry-run; that is, don't actually run any tests themselves
+	v - print verbose logs for the tester
+	l - store local results only (always configured)
+	s - store ONLY sqlite3 results (if configured)
+	i - store ONLY influxdb results (if configured)
+	w - store ONLY S3 results (if configured)
+	L - do NOT store local results (delete after completion)
+	S - do NOT store results in sqlite3 (even if configured)
+	I - do NOT store results in influxdb (even if configured)
+	W - do NOT store results in S3 (even if configured)
+
+Options with arguments: 
+
+	t (csv string) - specific list of test folders to run (comma separated, regex style)
+	R ([0-9]+) - reset locally-stored, monotonic run index to a specific value matching [0-9]+. use with caution. 
 
 "
 
 # parse args AFTER reading .env, to effect overrides
-while getopts "hrdvt:lsiwLIWS" OPT ; do
+while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 	case "${OPT}" in
-		h) echo ${YENTESTS_HELP_STRING} && exit 0 ;;
+		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "!" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
@@ -599,7 +617,8 @@ while getopts "hrdvt:lsiwLIWS" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) echo "listing tests..." ;; 
+		t) echo "listing tests... ${OPTARG}" ;; 
+		R) echo "reset-set runid... ${OPTARG}" ;; 
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
 done

@@ -2,6 +2,7 @@
 # 
 # @name read ifs lots
 # @description Read "lots" of small files from ifs
+# @skip 0
 # @version 1 
 # 
 
