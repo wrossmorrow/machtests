@@ -119,15 +119,16 @@ function _testCommand() {
 	# 
 	# This could be customized to other exit codes...
 	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
-		&& TMP_PASS="P" || TMP_PASS="F"
+		&& export YENTESTS_TEST_STATUS="P" \
+		|| export YENTESTS_TEST_STATUS="F"
 
-	# prepare (csv) status line
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${TMP_PASS}"
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_MEM_USED},${TMP_MEM_AVAIL}"
-	YENTESTS_TEST_STATUS="${YENTESTS_TEST_STATUS},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
+	# prepare (csv) output line
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_MEM_USED},${TMP_MEM_AVAIL}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -136,9 +137,9 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then
-		log "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
+		log "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}"
 	else 
-		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TEST_RESULTS}
+		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -165,7 +166,7 @@ function _testCommand() {
 	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
-	[[ ${TMP_PASS} =~ "F" ]] \
+	[[ ${YENTESTS_TEST_STATUS} =~ "F" ]] \
 		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
 		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
 
@@ -291,6 +292,19 @@ function testCommand() {
 # to wrap in case we bail early due to skipping logic
 function exitTestScript() {
 
+	# modify "todo" file by deleting matching line for this test
+	if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
+		TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
+		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
+		rm ${YENTESTS_TESTS_TODO_FILE}.bak
+	fi
+
+	# append to done file
+	if [[ -f ${YENTESTS_TESTS_DONE_FILE} ]] ; then 
+
+	fi
+
+	# clean up customized environment
 	if [[ -f .env-revert ]] ; then 
 		set -a && source .env-revert && set +a
 		rm .env-revert
@@ -391,6 +405,7 @@ function testScript() {
 					if [[ ${TMPLINE} =~ True ]] ; then 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
+						YENTESTS_TEST_STATUS='S'
 						exitTestScript
 						return
 					fi 
@@ -399,6 +414,7 @@ function testScript() {
 					if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
+						YENTESTS_TEST_STATUS='S'
 						exitTestScript
 						return
 					else 
@@ -488,19 +504,10 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE/tests})" 
-
 		# run the test
-		_testCommand "bash ${YENTESTS_TEST_FILE}"
-
-		log "finished \"${YENTESTS_TEST_NAME}\" (${TMP_PASS})"
-
-		# modify "todo" file by deleting 
-		if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
-			sed -Ei.bak "/$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
-			rm ${YENTESTS_TESTS_TODO_FILE}.bak
-			cat ${YENTESTS_TESTS_TODO_FILE}
-		fi
+		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE/tests})" 
+		_testCommand "bash ${YENTESTS_TEST_FILE}" 
+		log "finished \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_STATUS})"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -530,7 +537,7 @@ function runTestSuite() {
 	# enter the declared test suite directory
 	cd ${1}
 	
-	# run test.sh file in target folder, if it exists
+	# run test.sh file in target folder, if it exists... always first
 	[[ -f test.sh ]] && testScript test.sh
 
 	# if there is a "tests" __subfolder__, run ANY scripts in that
@@ -548,16 +555,22 @@ function runTestSuite() {
 	# 
 	if [[ -d tests ]] ; then 
 		
+		# setup "todo" file
 		> ${YENTESTS_TESTS_TODO_FILE}
+		TMP_TEST_COUNT=0
 		for t in tests/*.sh ; do
 			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${t} )
 			if [[ -z ${TMP_TEST_NAME} ]] ; then 
 				TMP_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${t}
 			fi
 			echo "${t},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${YENTESTS_TESTS_TODO_FILE}
+			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
-		for t in tests/*.sh ; do testScript ${t} ; done
+		# run through tests
+		for t in tests/*.sh ; do 
+			testScript ${t}
+		done
 
 		rm ${YENTESTS_TESTS_TODO_FILE}
 	fi
