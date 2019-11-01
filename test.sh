@@ -588,7 +588,7 @@ function runTestSuite() {
 
 		wc -l ${_YENTESTS_TESTS_TODO_FILE}
 
-		for I in `seq 1 $( wc -l ${_YENTESTS_TESTS_TODO_FILE} )` ; do 
+		for I in `seq 1 $( wc -l < ${_YENTESTS_TESTS_TODO_FILE} )` ; do 
 
 			while read S ; do 
 				[[ -f "${S}" ]] && testScript ${S}
@@ -601,7 +601,7 @@ function runTestSuite() {
 			printf "\n"
 
 			# break if todo file is empty
-			[[ $( wc -l ${_YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
+			[[ $( wc -l < ${_YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
 
 		done
 
