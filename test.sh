@@ -287,6 +287,26 @@ function testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+# a custom "exit" routine to call
+function exitTestScript() {
+
+	if [[ -f .env-revert ]] ; then 
+		set -a && source .env-revert && set +a
+	fi
+	rm -f .env-* > /dev/null
+
+	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
+	# unset is a shell builtin, so we can't use xargs: See
+	# 
+	# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
+	# 
+	while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
+
+	[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] \
+		&& log "WARNING: looks like environment wasn't cleaned properly..."
+
+}
+
 function testScript() {
 
 	# don't do anything unless passed a "real" file
@@ -376,6 +396,7 @@ function testScript() {
 					if [[ ${TMPLINE} =~ True ]] ; then 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
+						exitTestScript
 						return
 					fi 
 				else 
@@ -383,6 +404,7 @@ function testScript() {
 					if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
+						exitTestScript
 						return
 					else 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
@@ -484,20 +506,7 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		if [[ -f .env-revert ]] ; then 
-			set -a && source .env-revert && set +a
-		fi
-		rm -f .env-* > /dev/null
-
-		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
-		# unset is a shell builtin, so we can't use xargs: See
-		# 
-		# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
-		# 
-		while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
-
-		[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] \
-			&& log "WARNING: looks like environment wasn't cleaned"
+		exitTestScript
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
