@@ -20,6 +20,10 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# 
 # test command and setup result variables
 # $1 = command to test
 # 
@@ -34,6 +38,10 @@
 # 	YENTESTS_TEST_DURATION - 
 # 	YENTESTS_TEST_STATUS   - 
 # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 function _testCommand() {
 
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
@@ -218,7 +226,10 @@ function _testCommand() {
 
 }
 
-
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# 
 # test a command only, and setup result variables
 # 
 # This function expects the following to be defined: 
@@ -232,6 +243,10 @@ function _testCommand() {
 #	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
 #	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
 #	
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 function testCommand() {
 
 	# don't do anything unless passed a command
@@ -250,6 +265,10 @@ function testCommand() {
 
 }
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# 
 # test a script and setup result variables
 # 
 # This function expects the following to be defined: 
@@ -264,6 +283,10 @@ function testCommand() {
 #	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
 #	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
 #	
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 function testScript() {
 
 	# don't do anything unless passed a "real" file
@@ -298,7 +321,7 @@ function testScript() {
 			if [[ -n ${AFTERLINE} ]] ; then
 				# search through "after"'s, finding if _all_ are in done file... otherwise bail
 				# from this perspective, it could be better to store the reverse: a "todo" file
-				# with this code providing an exit if a line does _not_ exist...
+				# with this code exiting if a line exists in that file for a prerequisite
 				
 			fi
 
@@ -306,12 +329,17 @@ function testScript() {
 			TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+).*|\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${TMPLINE} ]] ; then
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
-					
+					echo "would skip based on probability... "
 				else 
-					
+					echo "would skip based on cycle, defined by RUNID"
+					# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
+					[[ $(( ${YENTESTS_TEST_RUNID} % $((  )) )) -ne  ]] && exit
 				fi
+			else 
+				TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+				[[ -n ${TMPLINE} ]] && [[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					&& log "@skip provided in frontmatter but seems to be malformed..."
 			fi
-
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
@@ -431,9 +459,17 @@ function testScript() {
 
 }
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# 
 # run a test suite in a folder
 # 
 # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 function runTestSuite() {
 
 	# enter the declared test suite directory
@@ -618,8 +654,8 @@ export YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE
 # create TEST_ID as a date-like string? that would be globally unique, 
 # but not _immediately_ comparable
 
+# at least make sure the directory exists
 if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then 
-	# at least make sure the directory exists
 	mkdir -p ${YENTESTS_HASH_LOG%/*}
 fi
 
@@ -642,14 +678,14 @@ for d in tests/*/ ; do
 
 	# if passed a list, only run tests in that list
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
-		
+
 		while read LI ; do 
 			if [[ $( echo ${d} | grep -oP "[^/]*$" ) =~ ${LI} ]] ; then 
 				runTestSuite ${d}
 				break
 			fi
 		done < <( echo ${YENTESTS_TEST_LIST} | tr ',' '\n' )
-		
+
 	else # otherwise, run ALL tests
 		runTestSuite ${d}
 	fi 

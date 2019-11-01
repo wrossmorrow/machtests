@@ -267,6 +267,38 @@ Our intent is that writing tests should be easy. All you should really know how 
 
 ## Frontmatter
 
+### `@name`
+
+The name to use for the test. For `influxdb`, spaces will be replaced with underscores. 
+
+### `@version`
+
+A version number for the test. 
+
+### `@description`
+
+A brief description of the test. This is for commenting purposes only; the description does not affect how the tests are actually run. May be parsed for documentation, however. 
+
+### `@authors`
+
+A list of test authors. This is for commenting purposes only; the authors do not affect how the tests are actually run. May be parsed for documentation, however. 
+
+### `@timeout`
+
+Specify a test-specific timeout (in seconds), or `none` for no timeout. Run tests without a timeout with caution. 
+
+### `@notimeout`
+
+A shortcut for `@timeout none`. Run tests without a timeout with caution. 
+
+### `@skip`
+
+Specification of when to run tests when _not_ running every time the tests code executes. By specifying a positive integer you specify how many cycles or runs are _skipped_; for example, `@skip 3` means that a particular test will run only every _fourth_ execution of the testing code. Specifying a positive decimal number less than one is interpreted as a probability; for example, `@skip 0.25` means that the test could run in any execution but will, in the long run, run in only 75% of executions. 
+
+### `@after`
+
+A list of (comma-separated) pre-requisites from the same test suite. 
+
 
 ## Incorporating Your Changes
 
