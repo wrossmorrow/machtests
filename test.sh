@@ -312,6 +312,7 @@ function testScript() {
 				env > .env-local
 				grep -vxFf .env-global .env-local > .env-changes
 
+				cat .defaults
 				cat .env-changes
 
 				# ok, so if a variable exists in .env-changes and it...
@@ -330,6 +331,8 @@ function testScript() {
 				cat .env-global  | grep -f .env-changed-vars >> .env-revert
 
 				cat .env-revert
+
+				# we clean up from all this later with "rm .env-*"
 
 			fi
 
