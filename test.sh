@@ -495,8 +495,12 @@ function testScript() {
 
 		log "finished \"${YENTESTS_TEST_NAME}\" (${TMP_PASS})"
 
-		# modify "todo" file... 
-		cat ${YENTESTS_TESTS_TODO_FILE}
+		# modify "todo" file by deleting 
+		if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
+			cat ${YENTESTS_TESTS_TODO_FILE}
+			# sed -Ei.bak "/${YENTESTS_TEST_FILE}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
+			# mv ${YENTESTS_TESTS_TODO_FILE}.bak ${YENTESTS_TESTS_TODO_FILE}
+		fi
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
@@ -546,7 +550,11 @@ function runTestSuite() {
 		
 		> ${YENTESTS_TESTS_TODO_FILE}
 		for t in tests/*.sh ; do
-			echo ${t} | grep -oP '[^/]*$' >> ${YENTESTS_TESTS_TODO_FILE}
+			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${t} )
+			if [[ -z ${TMP_TEST_NAME} ]] ; then 
+				TMP_TEST_NAME=$( echo ${PWD/$_YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${t}
+			fi
+			echo "${t},${TMP_TEST_NAME}" | grep -oP '[^/]*$' >> ${YENTESTS_TESTS_TODO_FILE}
 		done
 
 		for t in tests/*.sh ; do testScript ${t} ; done
