@@ -331,7 +331,7 @@ function testScript() {
 				# search through "after"'s, finding if _all_ are in done file... otherwise bail
 				# from this perspective, it could be better to store the reverse: a "todo" file
 				# with this code exiting if a line exists in that file for a prerequisite
-				echo "prerequisites"
+				echo "prerequisites..."
 			fi
 
 			# off-cycle or randomly executed? 
@@ -343,14 +343,14 @@ function testScript() {
 					if [[ ${TMPLINE} =~ True ]] ; then 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
-						exit
+						return
 					fi 
 				else 
 					# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
 					if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
-						exit
+						return
 					else 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by YENTESTS_TEST_RUNID."
