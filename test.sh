@@ -547,8 +547,6 @@ function unsetEnvVarsMatchingPrefix() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-echo "starting yentests..."
-
 # tests home folder... use _ first to keep this variable defined
 # export _YENTESTS_TEST_HOME=/ifs/yentools/yentests
 export _YENTESTS_TEST_HOME=${PWD}
@@ -617,7 +615,7 @@ while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) echo "listing tests... ${OPTARG}" ;; 
+		t) YENTESTS_TEST_LIST && log "listing tests... ${OPTARG}" ;; 
 		R) echo "reset-set runid... ${OPTARG}" ;; 
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
@@ -687,6 +685,8 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+log "starting yentests..."
 
 # store relevant env vars for use in test suites... we will clean and reload this on each run
 # quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
