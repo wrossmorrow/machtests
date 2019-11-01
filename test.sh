@@ -287,13 +287,14 @@ function testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# a custom "exit" routine to call
+# a custom "exit" routine to call below, that does variable clean up. this is important
+# to wrap in case we bail early due to skipping logic
 function exitTestScript() {
 
 	if [[ -f .env-revert ]] ; then 
 		set -a && source .env-revert && set +a
+		rm .env-revert
 	fi
-	rm -f .env-* > /dev/null
 
 	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
 	# unset is a shell builtin, so we can't use xargs: See
@@ -323,17 +324,15 @@ function testScript() {
 			# them away later
 			source ${_YENTESTS_TEST_HOME}/.defaults
 
-			env > .env-global
 			if [[ -f .env ]] ; then 
+
+				env > .env-global
 
 				source .env
 
 				# capture (possible) changes
 				env > .env-local
 				grep -vxFf .env-global .env-local > .env-changes
-
-				# cat ${_YENTESTS_TEST_HOME}/.defaults
-				# cat .env-changes
 
 				# ok, so if a variable exists in .env-changes and it...
 				# 
@@ -351,15 +350,8 @@ function testScript() {
 				cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
 				cat .env-global  | grep -f .env-changed-vars >> .env-revert
 
-				printf "\nchanges to clean up in the environment:\n"
-				cat .env-revert
-				printf "\n" 
-
-				# we clean up from all this later with "rm .env-*"
-
-			else 
-
-				log "No .env file"
+				# clean up
+				rm .env-global .env-local .env-changes .env-global-vars .env-changed-vars
 
 			fi
 
@@ -503,19 +495,16 @@ function testScript() {
 
 		log "finished \"${YENTESTS_TEST_NAME}\" (${TMP_PASS})"
 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-		# 
-		# CLEAR VARIABLES
-		# 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-		exitTestScript
+		# modify "todo" file... 
+		cat ${YENTESTS_TESTS_TODO_FILE}
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
 		# DONE
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+		exitTestScript
 
 	fi
 
@@ -554,6 +543,12 @@ function runTestSuite() {
 	# the done list checking for a matching filename or testname. 
 	# 
 	if [[ -d tests ]] ; then 
+		
+		> ${YENTESTS_TESTS_TODO_FILE}
+		for t in tests/*.sh ; do
+			echo ${t} | grep -oP '[^/]*$' >> ${YENTESTS_TESTS_TODO_FILE}
+		done
+
 		for t in tests/*.sh ; do testScript ${t} ; done
 	fi
 	
@@ -724,6 +719,10 @@ export YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE
 if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then 
 	mkdir -p ${YENTESTS_HASH_LOG%/*}
 fi
+
+# define 
+[[ -z ${YENTESTS_TESTS_TODO_FILE} ]] \
+	&& YENTESTS_TESTS_TODO_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
