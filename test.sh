@@ -696,9 +696,11 @@ for d in tests/*/ ; do
 
 	# if passed a list, only run tests in that list
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
-
+		echo ${TEST_SUITE_DIR}
+		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
 		while read LI ; do 
-			if [[ $( echo ${d} | grep -oP "[^/]*$" ) =~ ${LI} ]] ; then 
+			echo ${LI}
+			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then 
 				runTestSuite ${d}
 				break
 			fi
