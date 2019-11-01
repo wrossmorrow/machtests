@@ -488,6 +488,8 @@ function testScript() {
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "changing hash log file line..."
 
+					echo "${PWD}/${YENTESTS_TEST_FILE}"
+
 						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|" )
 						YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
