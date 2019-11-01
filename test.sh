@@ -558,6 +558,8 @@ function runTestSuite() {
 		done
 
 		for t in tests/*.sh ; do testScript ${t} ; done
+
+		rm ${YENTESTS_TESTS_TODO_FILE}
 	fi
 	
 	# leave the test suite directory by returning to the working directory for all tests
