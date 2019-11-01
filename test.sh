@@ -498,7 +498,6 @@ function testScript() {
 		# modify "todo" file by deleting 
 		if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
 			cat ${YENTESTS_TESTS_TODO_FILE}
-			echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' 
 			sed -Ei.bak "/$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
 			rm ${YENTESTS_TESTS_TODO_FILE}.bak
 			cat ${YENTESTS_TESTS_TODO_FILE}
