@@ -313,7 +313,6 @@ function testScript() {
 
 			if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then
 				log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
-				sed -En 's|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|\0|p' ${YENTESTS_TEST_FILE}
 			fi
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
@@ -333,7 +332,7 @@ function testScript() {
 			fi
 
 			# off-cycle or randomly executed? 
-			TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+).*,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+			TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${TMPLINE} ]] ; then
 				log "skip defined in \"${YENTESTS_TEST_NAME}\""
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
