@@ -699,7 +699,7 @@ for d in tests/*/ ; do
 		echo ${TEST_SUITE_DIR}
 		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
 		while read LI ; do 
-			echo ${LI}
+			echo "  ${LI}"
 			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then 
 				runTestSuite ${d}
 				break
