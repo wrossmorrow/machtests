@@ -133,7 +133,9 @@ PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
 
 ## Installing yentests as a Scheduled systemd Unit
 
-TBD
+We can use `systemd` timers to run the `yentests` on a schedule. Prototypes are provided in the `service` folder. 
+
+
 
 --- 
 

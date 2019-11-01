@@ -1,0 +1,13 @@
+# install in /etc/systemd/system
+
+[Unit]
+Description=A timer for running test suites on the yens
+Requires=yentests.service
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+AccuracySec=1s
+Unit=yentests.service
+
+[Install]
+WantedBy=timers.target

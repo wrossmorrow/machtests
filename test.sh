@@ -105,7 +105,7 @@ function _testCommand() {
 		TMP_TEST_TIMEDOUT='true'
 	fi
 	# set a min value for time so the record can be caught by the kapacitor alert
-	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.01
+	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.0001
 
 	# check exit code and set success flag 
 	# 
@@ -127,7 +127,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then
 		log "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}"
 	else 
 		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TEST_RESULTS}
@@ -139,7 +139,8 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	# NOTE: replace spaces in names (and host?) with _ to prevent invalid field format error return from influxdb
+	# NOTE: replace spaces in names (and host?) with _ to prevent invalid field format error return from 
+	# influxdb
 
 	# string we'll want to write to influxdb... 
 	# 
@@ -292,6 +293,26 @@ function testScript() {
 				sed -En 's|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|\0|p' ${YENTESTS_TEST_FILE}
 			fi
 
+			# parse out any prerequisites from frontmatter... 
+			AFTERLINE=$( sed -En 's|^[ ]*#[ ]*@after (.*)$|\1|p;/^[ ]*#[ ]*@after /q' ${YENTESTS_TEST_FILE} )
+			if [[ -n ${AFTERLINE} ]] ; then
+				# search through "after"'s, finding if _all_ are in done file... otherwise bail
+				# from this perspective, it could be better to store the reverse: a "todo" file
+				# with this code providing an exit if a line does _not_ exist...
+				
+			fi
+
+			# off-cycle or randomly executed? 
+			TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+).*|\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+			if [[ -n ${TMPLINE} ]] ; then
+				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
+					
+				else 
+					
+				fi
+			fi
+
+
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
 			if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
@@ -410,6 +431,39 @@ function testScript() {
 
 }
 
+# run a test suite in a folder
+# 
+# 
+function runTestSuite() {
+
+	# enter the declared test suite directory
+	cd ${1}
+	
+	# run test.sh file in target folder, if it exists
+	[[ -f test.sh ]] && testScript test.sh
+
+	# if there is a "tests" __subfolder__, run ANY scripts in that
+	# (run ANY scripts so we don't have to mess with making a "manifest")
+	# any such script should expect to run from the suite directory
+	# 
+	# here is where we can assert ordering... with multiple passes 
+	# over the tests subfolder, a "done" list, and reading "after"
+	# (and/or "before"?) front matter elements (if any)
+	# 
+	# There can be as many as #files passes, no more. We can maintain 
+	# a done list with "filename,testname" rows and check the list
+	# when checking frontmatter. If there is an "after" element, read
+	# the done list checking for a matching filename or testname. 
+	# 
+	if [[ -d tests ]] ; then 
+		for t in tests/*.sh ; do testScript ${t} ; done
+	fi
+	
+	# leave the test suite directory by returning to the working directory for all tests
+	cd ${_YENTESTS_TEST_HOME}
+	
+}
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -477,18 +531,39 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_TEST_RESULTS} ]] && YENTESTS_TEST_RESULTS=${PWD}/results/${YENTESTS_TEST_HOST}
 [[ -z ${YENTESTS_HASH_LOG}     ]] && YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
 
+YENTESTS_HELP_STRING="YENTESTS - infrastructure for running regular tests on the 
+GSB's yen research computing servers. 
+
+	h    - print this message and exit. 
+	r    - reset locally-stored, monotonic run index. use with caution. 
+	d    - do a dry-run; that is, don't actually run any tests themselves
+	v    - print verbose logs for the tester
+	t () - specific list of test folders to run (comma separated, regex style)
+	l    - store local results only (always configured)
+	s    - store ONLY sqlite3 results (if configured)
+	i    - store ONLY influxdb results (if configured)
+	w    - store ONLY S3 results (if configured)
+	L    - do NOT store local results (delete after completion)
+	S    - do NOT store results in sqlite3 (even if configured)
+	I    - do NOT store results in influxdb (even if configured)
+	W    - do NOT store results in S3 (even if configured)
+
+"
+
 # parse args AFTER reading .env, to effect overrides
-while getopts "hrdvlwIWS" OPT ; do
+while getopts "hrdvt:lsiwLIWS" OPT ; do
 	case "${OPT}" in
-		h) printHelp ; exit 0 ;;
+		h) echo ${YENTESTS_HELP_STRING} ; exit 0 ;;
 		r) echo "!" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
+		t) YENTESTS_TEST_LIST=${OPTARG} ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		t) 
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1;;
 	esac
 done
@@ -562,24 +637,22 @@ fi
 # quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
 env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
-# loop over test suites
+# loop over test suites...
 for d in tests/*/ ; do 
 
-	# enter this test suite directory
-	cd ${d}
-	
-	# run test.sh file in target folder, if it exists
-	[[ -f test.sh ]] && testScript test.sh
-
-	# if there is a "tests" __subfolder__, run ANY scripts in that
-	# (run ANY scripts so we don't have to mess with making a "manifest")
-	# any such script should expect to run from the directory "$d", not tests
-	if [[ -d tests ]] ; then 
-		for t in tests/*.sh ; do testScript ${t} ; done
-	fi
-	
-	# leave the test suite directory by returning to the working directory for all tests
-	cd ${_YENTESTS_TEST_HOME}
+	# if passed a list, only run tests in that list
+	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
+		
+		while read LI ; do 
+			if [[ $( echo ${d} | grep -oP "[^/]*$" ) =~ ${LI} ]] ; then 
+				runTestSuite ${d}
+				break
+			fi
+		done < <( echo ${YENTESTS_TEST_LIST} | tr ',' '\n' )
+		
+	else # otherwise, run ALL tests
+		runTestSuite ${d}
+	fi 
 
 done
 
