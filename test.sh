@@ -692,7 +692,7 @@ log "starting yentests..."
 env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
 # loop over test suites...
-for d in tests/*/ ; do 
+for d in tests/** ; do 
 
 	# if passed a list, only run tests in that list
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
