@@ -299,8 +299,37 @@ function testScript() {
 				&& log "loading environment..."
 
 			# load default variables and any environment variables specific to this test suite
+			# also, though, store which variables the local .env file adds or alters, so we can take 
+			# them away later
 			source ${_YENTESTS_TEST_HOME}/.defaults
-			[[ -f .env ]] && source .env
+
+			env > .env-global
+			if [[ -f .env ]] ; then 
+
+				source .env
+
+				# capture (possible) changes
+				env > .env-local
+				grep -vxFf .env-global .env-local > .env-changes
+
+				# ok, so if a variable exists in .env-changes and it...
+				# 
+				# 	does NOT exist in .env-global, we should unset it when done
+				# 	DOES exist in .env-global, we should revert to its previous value
+				# 
+
+				# unset those declarations that were added
+				cat .env-changes | grep -vf .env-global | echo "unset $( awk -F'=' '{ print $1 }' )" > .env-revert
+
+				# find variables that existed before and were changed, then filter the previous env
+				# to that list
+				cat .env-global  | sed -En 's/^([A-Z][^=]*)=(.*)/^\1/Ip' > .env-global-vars
+				cat .env-changes | grep -f .env-before-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
+				cat .env-global  | grep -f .env-changed-vars >> .env-revert
+
+				cat .env-revert
+
+			fi
 
 			# strip PWD (not FULL path, just PWD) from filename, if it was passed
 			YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
@@ -311,9 +340,8 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then
-				log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
-			fi
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
 			# or... provided in the environment? environment might not guarantee uniqueness. 
@@ -446,6 +474,11 @@ function testScript() {
 		# CLEAR VARIABLES
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+		if [[ -f .env-revert ]] ; then 
+			set -a && source .env-revert && set +a
+		fi
+		rm -f .env-* > /dev/null
 
 		# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
 		# unset is a shell builtin, so we can't use xargs: See

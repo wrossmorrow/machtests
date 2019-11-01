@@ -6,6 +6,9 @@
 # @after read ifs lots
 # 
 
+[[ -z ${IFS_TEST_SUITE_LOTS_IFS_DIR} ]] && exit
+[[ -z ${IFS_TEST_SUITE_LOTS_LOC_DIR} ]] && IFS_TEST_SUITE_LOTS_LOC_DIR=/tmp
+
 if [[ ${IFS_TEST_SUITE_LOTS_LIMIT} =~ [0-9]+ ]] ; then 
 	COUNT=0
 	for F in ${IFS_TEST_SUITE_LOTS_LOC_DIR}/* ; do
