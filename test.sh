@@ -299,9 +299,9 @@ function exitTestScript() {
 		rm ${YENTESTS_TESTS_TODO_FILE}.bak
 	fi
 
-	# append to done file
+	# append information to "done" file
 	if [[ -f ${YENTESTS_TESTS_DONE_FILE} ]] ; then 
-
+		echo "${YENTESTS_TEST_FILE},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TESTS_DONE_FILE}
 	fi
 
 	# clean up customized environment
@@ -322,6 +322,7 @@ function exitTestScript() {
 
 }
 
+# ok, test functions
 function testScript() {
 
 	# don't do anything unless passed a "real" file
@@ -554,6 +555,9 @@ function runTestSuite() {
 	# the done list checking for a matching filename or testname. 
 	# 
 	if [[ -d tests ]] ; then 
+
+		# empty "done" file
+		> ${YENTESTS_TESTS_DONE_FILE}
 		
 		# setup "todo" file
 		> ${YENTESTS_TESTS_TODO_FILE}
@@ -570,9 +574,13 @@ function runTestSuite() {
 		# run through tests
 		for t in tests/*.sh ; do 
 			testScript ${t}
+
+			printf "\ndone file: \n" && cat ${YENTESTS_TESTS_DONE_FILE}
+			printf "\ntodo file: \n" && cat ${YENTESTS_TESTS_TODO_FILE}
+
 		done
 
-		rm ${YENTESTS_TESTS_TODO_FILE}
+		rm ${YENTESTS_TESTS_TODO_FILE} ${YENTESTS_TESTS_DONE_FILE}
 	fi
 	
 	# leave the test suite directory by returning to the working directory for all tests
@@ -743,9 +751,15 @@ if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then
 	mkdir -p ${YENTESTS_HASH_LOG%/*}
 fi
 
-# define 
+# define "todo" file, if not customized
 [[ -z ${YENTESTS_TESTS_TODO_FILE} ]] \
 	&& YENTESTS_TESTS_TODO_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo
+export YENTESTS_TESTS_TODO_FILE
+
+# define "done" file, if not customized
+[[ -z ${YENTESTS_TESTS_DONE_FILE} ]] \
+	&& YENTESTS_TESTS_DONE_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done
+export YENTESTS_TESTS_DONE_FILE
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
