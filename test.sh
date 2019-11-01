@@ -322,7 +322,7 @@ function testScript() {
 				# search through "after"'s, finding if _all_ are in done file... otherwise bail
 				# from this perspective, it could be better to store the reverse: a "todo" file
 				# with this code exiting if a line exists in that file for a prerequisite
-				
+				echo "prerequisites"
 			fi
 
 			# off-cycle or randomly executed? 
