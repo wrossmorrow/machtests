@@ -586,6 +586,8 @@ function runTestSuite() {
 			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
+		wc -l ${_YENTESTS_TESTS_TODO_FILE}
+
 		for I in `seq 1 $( wc -l ${_YENTESTS_TESTS_TODO_FILE} )` ; do 
 
 			while read S ; do 
