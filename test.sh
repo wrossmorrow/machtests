@@ -319,12 +319,12 @@ function testScript() {
 				# 
 
 				# unset those declarations that were added
-				cat .env-changes | grep -vf .env-global | echo "unset $( awk -F'=' '{ print $1 }' )" > .env-revert
+				cat .env-changes | grep -vf .env-global | awk -F'=' '{ print "unset "$1 }' > .env-revert
 
 				# find variables that existed before and were changed, then filter the previous env
 				# to that list
 				cat .env-global  | sed -En 's/^([A-Z][^=]*)=(.*)/^\1/Ip' > .env-global-vars
-				cat .env-changes | grep -f .env-before-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
+				cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
 				cat .env-global  | grep -f .env-changed-vars >> .env-revert
 
 				cat .env-revert
