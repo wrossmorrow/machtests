@@ -341,16 +341,17 @@ function testScript() {
 				# 	DOES exist in .env-global, we should revert to its previous value
 				# 
 
-				# unset those declarations that were added
-				cat .env-changes | grep -vf .env-global | awk -F'=' '{ print "unset "$1 }' > .env-revert
-
-				# find variables that existed before and were changed, then filter the previous env
-				# to that list
+				# list variables that existed before and were changed
 				cat .env-global  | sed -En 's/^([A-Z][^=]*)=(.*)/^\1/Ip' > .env-global-vars
+
+				# unset those declarations that were added
+				cat .env-changes | grep -vf .env-global-vars | awk -F'=' '{ print "unset "$1 }' > .env-revert
+
+				# filter the previous env to that list
 				cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
 				cat .env-global  | grep -f .env-changed-vars >> .env-revert
 
-				printf "\nchanges to clean up in the environment: "
+				printf "\nchanges to clean up in the environment:\n"
 				cat .env-revert
 				printf "\n" 
 
