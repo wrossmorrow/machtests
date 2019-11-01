@@ -586,18 +586,13 @@ function runTestSuite() {
 			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
-		# run through tests
-		#while [ 1 ] ; do 
-		#	cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1
-		# done
-
-		for T in tests/*.sh ; do 
+		for I in `seq 1 $( wc -l ${_YENTESTS_TESTS_TODO_FILE} )` ; do 
 
 			while read S ; do 
-				echo "${S}"
+				[[ -f "${S}" ]] && testScript ${S}
 			done < <( cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1 )
 
-			testScript ${T}
+			# testScript ${T}
 
 			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
 			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
