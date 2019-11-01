@@ -288,21 +288,7 @@ function testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# a custom "exit" routine to call below, that does variable clean up. this is important
-# to wrap in case we bail early due to skipping logic
-function exitTestScript() {
-
-	# modify "todo" file by deleting matching line for this test
-	if [[ -f ${_YENTESTS_TESTS_TODO_FILE} ]] ; then 
-		TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
-		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${_YENTESTS_TESTS_TODO_FILE}
-		rm ${_YENTESTS_TESTS_TODO_FILE}.bak
-	fi
-
-	# append information to "done" file
-	if [[ -f ${_YENTESTS_TESTS_DONE_FILE} ]] ; then 
-		echo "${YENTESTS_TEST_FILE},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${_YENTESTS_TESTS_DONE_FILE}
-	fi
+function deferTestScript() {
 
 	# clean up customized environment
 	if [[ -f .env-revert ]] ; then 
@@ -319,6 +305,28 @@ function exitTestScript() {
 
 	[[ $( env | grep '^YENTESTS' | wc -l ) -ge 1 ]] \
 		&& log "WARNING: looks like environment wasn't cleaned properly..."
+
+}
+
+# a custom "exit" routine to call below, that does variable clean up. this is important
+# to wrap in case we bail early due to skipping logic
+function exitTestScript() {
+	
+	TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
+
+	# modify "todo" file by deleting matching line for this test
+	if [[ -f ${_YENTESTS_TESTS_TODO_FILE} ]] ; then 
+		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${_YENTESTS_TESTS_TODO_FILE}
+		rm ${_YENTESTS_TESTS_TODO_FILE}.bak
+	fi
+
+	# append information to "done" file
+	if [[ -f ${_YENTESTS_TESTS_DONE_FILE} ]] ; then 
+		echo "${TMP_FILE_NAME},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${_YENTESTS_TESTS_DONE_FILE}
+	fi
+
+	# run the cleanup defined above
+	deferTestScript
 
 }
 
@@ -395,7 +403,14 @@ function testScript() {
 				# search through "after"'s, finding if _all_ are in done file... otherwise bail
 				# from this perspective, it could be better to store the reverse: a "todo" file
 				# with this code exiting if a line exists in that file for a prerequisite
-				TMP=1
+				IFS=","
+				for P in ${AFTERLINE} ; do
+					if [[ -n $( grep ${P} ${_YENTESTS_TESTS_TODO_FILE} ) ]] ; then
+						log "deferring ${YENTESTS_TEST_NAME}, ${P} not completed"
+						deferTestScript
+						return
+					fi
+				done
 			fi
 
 			# off-cycle or randomly executed? 
