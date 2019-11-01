@@ -598,6 +598,9 @@ function runTestSuite() {
 			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
 			printf "\n"
 
+			# break if todo file is empty
+			[[ $( wc -l ${_YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
+
 		done
 
 		# clean up 
