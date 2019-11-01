@@ -335,7 +335,7 @@ function testScript() {
 			TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${TMPLINE} ]] ; then
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
-					TMPLINE=$( python -c "from random import random; print( random() > ${TMPLINE} )" )
+					TMPLINE=$( python -c "from random import random; print( random() <= ${TMPLINE} )" )
 					if [[ ${TMPLINE} =~ True ]] ; then 
 						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
