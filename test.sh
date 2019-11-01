@@ -589,7 +589,7 @@ GSB's yen research computing servers.
 # parse args AFTER reading .env, to effect overrides
 while getopts "hrdvt:lsiwLIWS" OPT ; do
 	case "${OPT}" in
-		h) echo ${YENTESTS_HELP_STRING} ; exit 0 ;;
+		h) echo ${YENTESTS_HELP_STRING} && exit 0 ;;
 		r) echo "!" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
@@ -599,8 +599,8 @@ while getopts "hrdvt:lsiwLIWS" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) 
-		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1;;
+		t) echo "listing tests..." ;; 
+		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
 done
 shift ${OPTIND}-1
