@@ -312,7 +312,7 @@ function testScript() {
 				env > .env-local
 				grep -vxFf .env-global .env-local > .env-changes
 
-				cat .defaults
+				cat ${_YENTESTS_TEST_HOME}/.defaults
 				cat .env-changes
 
 				# ok, so if a variable exists in .env-changes and it...
