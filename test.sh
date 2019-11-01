@@ -488,7 +488,7 @@ function testScript() {
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE})" 
+		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE/tests})" 
 
 		# run the test
 		_testCommand "bash ${YENTESTS_TEST_FILE}"
@@ -498,7 +498,7 @@ function testScript() {
 		# modify "todo" file by deleting 
 		if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
 			cat ${YENTESTS_TESTS_TODO_FILE}
-			# sed -Ei.bak "/${YENTESTS_TEST_FILE}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
+			# sed -Ei.bak "/${YENTESTS_TEST_FILE/tests}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
 			# mv ${YENTESTS_TESTS_TODO_FILE}.bak ${YENTESTS_TESTS_TODO_FILE}
 		fi
 
