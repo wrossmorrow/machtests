@@ -333,7 +333,7 @@ function testScript() {
 				else 
 					echo "would skip based on cycle, defined by RUNID"
 					# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
-					[[ $(( ${YENTESTS_TEST_RUNID} % $((  )) )) -ne  ]] && exit
+					[[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] && exit
 				fi
 			else 
 				TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\1|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
