@@ -328,13 +328,12 @@ function testScript() {
 				# search through "after"'s, finding if _all_ are in done file... otherwise bail
 				# from this perspective, it could be better to store the reverse: a "todo" file
 				# with this code exiting if a line exists in that file for a prerequisite
-				echo "prerequisites..."
+				TMP=1
 			fi
 
 			# off-cycle or randomly executed? 
 			TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 			if [[ -n ${TMPLINE} ]] ; then
-				log "skip defined in \"${YENTESTS_TEST_NAME}\""
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
 					TMPLINE=$( python -c "from random import random; print( random() > ${TMPLINE} )" )
 					if [[ ${TMPLINE} =~ True ]] ; then 
