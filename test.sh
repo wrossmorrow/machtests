@@ -755,13 +755,13 @@ fi
 
 # define "todo" file, if not customized
 [[ -n ${YENTESTS_TESTS_TODO_FILE} ]] \
-	&& export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TESTS_TODO_FILE}
-	|| export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo
+	&& export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TESTS_TODO_FILE} \
+	|| export _YENTESTS_TESTS_TODO_FILE="${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo"
 
 # define "done" file, if not customized
 [[ -n ${YENTESTS_TESTS_DONE_FILE} ]] \
-	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE}
-	|| export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done
+	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE} \
+	|| export _YENTESTS_TESTS_DONE_FILE="${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
