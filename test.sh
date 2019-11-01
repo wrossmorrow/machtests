@@ -694,19 +694,17 @@ env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 # loop over test suites...
 for d in tests/** ; do 
 
-	# if passed a list, only run tests in that list
+	# if passed a list, only run tests in that list; otherwise, run ALL tests
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
 		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
-		echo "${d}:: ${TEST_SUITE_DIR}"
 		while read LI ; do 
-			echo "  ${LI}"
 			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then 
 				runTestSuite ${d}
 				break
 			fi
 		done < <( echo ${YENTESTS_TEST_LIST} | tr ',' '\n' )
 
-	else # otherwise, run ALL tests
+	else
 		runTestSuite ${d}
 	fi 
 
