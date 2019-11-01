@@ -312,7 +312,7 @@ function testScript() {
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 			if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then
-				log "parsing frontmatter..."
+				log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
 				sed -En 's|^[ ]*#[ ]*@[a-zA-Z]+ (.*)|\0|p' ${YENTESTS_TEST_FILE}
 			fi
 
@@ -614,7 +614,7 @@ while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) YENTESTS_TEST_LIST=${OPTARG} && echo "listed tests... ${OPTARG}" ;; 
+		t) YENTESTS_TEST_LIST=${OPTARG} ;; 
 		R) [[ ${OPTARG} =~ ^[0-9]+$ ]] && echo "${OPTARG}" > ${YENTESTS_TEST_RIDF} ;;
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
