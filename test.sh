@@ -777,6 +777,8 @@ log "starting yentests..."
 # quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
 env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
+cat .defaults
+
 # loop over test suites...
 for d in tests/** ; do 
 
