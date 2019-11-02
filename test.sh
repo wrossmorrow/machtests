@@ -1,20 +1,51 @@
 #!/bin/bash
 
-# 
-# (1) fill neccessary environment
-# (2) define test's "RUNID"
-# (3) loop through structured sub-folders
-# 		• run each test.sh file
-#		• run each *.sh file in tests/ subfolders
-# 		• each such test run needs a "TESTID" that stays the same across runs - use a hash
-#		• we should also parse our "front matter" tags... maybe for version?
-# 
+YENTESTS_HELP_STRING="YENTESTS - infrastructure for running regular tests on the 
+GSB's yen research computing servers. 
+
+DESCRIPTION
+
+
+
+ARGUMENTS 
+
+  Command line option flags: 
+
+    h - print this message and exit. 
+    r - reset locally-stored, monotonic run index. use with caution. 
+    d - do a dry-run; that is, don't actually run any tests themselves
+    v - print verbose logs for the tester
+    l - store local results only (always configured)
+    s - store ONLY sqlite3 results (if configured)
+    i - store ONLY influxdb results (if configured)
+    w - store ONLY S3 results (if configured)
+    L - do NOT store local results (delete after completion)
+    S - do NOT store results in sqlite3 (even if configured)
+    I - do NOT store results in influxdb (even if configured)
+    W - do NOT store results in S3 (even if configured)
+
+  Command line options with arguments: 
+
+    t (string) - Specific list of test folders to run (comma separated, bash regex ok)
+    e (string) - Specific list of test folders to exclude (comma separated, bash regex ok)
+    R ([0-9]+) - Reset locally-stored, monotonic run index to a specific value matching [0-9]+. Use with caution. 
+
+EXAMPLES
+
+  
+
+CONTACT
+
+  Data, Analytics, and Research Computing: gsb_darcresearch@stanford.edu
+  Written by Ferdi Evalle and W. Ross Morrow
+
+"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
-# DEFINE UTILITY FUNCTIONS
+# UTILITY FUNCTIONS
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -70,6 +101,7 @@ function _testCommand() {
 	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_USED=$(( TMP_MEM_TOTAL - TMP_MEM_AVAIL ))
+	rm "${YENTESTS_TMP_LOG_DIR}/mem.log"
     
 	# set temporary log files for catching test run output
 	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
@@ -196,7 +228,7 @@ function _testCommand() {
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
-						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
+						-X POST "${_YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
 		if [[ ${CURL_STAT} -ne 204 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
@@ -679,32 +711,6 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_TEST_RESULTS} ]] && YENTESTS_TEST_RESULTS=${PWD}/results/${YENTESTS_TEST_HOST}
 [[ -z ${YENTESTS_HASH_LOG}     ]] && YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
 
-YENTESTS_HELP_STRING="YENTESTS - infrastructure for running regular tests on the 
-GSB's yen research computing servers. 
-
-Option flags: 
-
-	h - print this message and exit. 
-	r - reset locally-stored, monotonic run index. use with caution. 
-	d - do a dry-run; that is, don't actually run any tests themselves
-	v - print verbose logs for the tester
-	l - store local results only (always configured)
-	s - store ONLY sqlite3 results (if configured)
-	i - store ONLY influxdb results (if configured)
-	w - store ONLY S3 results (if configured)
-	L - do NOT store local results (delete after completion)
-	S - do NOT store results in sqlite3 (even if configured)
-	I - do NOT store results in influxdb (even if configured)
-	W - do NOT store results in S3 (even if configured)
-
-Options with arguments: 
-
-	t (string) - specific list of test folders to run (comma separated, bash regex ok)
-	e (string) - specific list of test folders to exclude (comma separated, bash regex ok)
-	R ([0-9]+) - reset locally-stored, monotonic run index to a specific value matching [0-9]+. use with caution. 
-
-"
-
 # parse args AFTER reading .env, to effect overrides
 while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
 	case "${OPT}" in
@@ -744,20 +750,36 @@ mkdir -p ${YENTESTS_TEST_RESULTS%/*}
 
 # create and export the log function to make it accessible in children
 if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
+
+if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+function log() {
+	echo "$( date +"%FT%T.%N" ):${PWD}: $1"
+}
+else 
 function log() {
 	echo "$( date +"%FT%T.%N" ): $1"
 }
+fi
+
 else 
+
 # make sure runlog location exists
 mkdir -p ${YENTESTS_RUN_LOG%/*}
+if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+function log() {
+	echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${YENTESTS_RUN_LOG}
+}
+else 
 function log() {
 	echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
 }
 fi
+
+fi
 export -f log
 
-# construct a usable influxdb URL
-export YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
+# construct a usable influxdb URL ("global" env var)
+export _YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
 
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
