@@ -76,7 +76,7 @@ CONTACT
 function _testCommand() {
 
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-		&& log "testing command \"${1}\" from ${PWD}"
+		&& log "testing command \"${1}\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
