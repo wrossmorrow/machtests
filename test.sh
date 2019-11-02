@@ -523,7 +523,7 @@ function testScript() {
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 		# run the test
-		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE/tests})" 
+		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE})" 
 		_testCommand "bash ${YENTESTS_TEST_FILE}" 
 		log "finished \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_STATUS})"
 
@@ -551,6 +551,11 @@ function testScript() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 function runTestSuite() {
+
+	# export the suite name as a "global" env var, just the folder name
+	# this will thus be accessible in subroutines here if we want to use 
+	# it to identify/tag, locate, or print anything
+	export _YENTESTS_TEST_SUITE_NAME=${1}
 
 	# enter the declared test suite directory
 	cd ${1}
@@ -593,12 +598,6 @@ function runTestSuite() {
 			while read S ; do 
 				[[ -f "tests/${S}" ]] && testScript "tests/${S}"
 			done < <( cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1 )
-
-			# testScript ${T}
-
-			printf "\ndone file: \n" && cat ${_YENTESTS_TESTS_DONE_FILE}
-			printf "\ntodo file: \n" && cat ${_YENTESTS_TESTS_TODO_FILE}
-			printf "\n"
 
 			# break if todo file is empty
 			[[ $( wc -l < ${_YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
@@ -816,7 +815,8 @@ if [[ -n ${YENTESTS_TEST_EXCL} ]] ; then
 
 	done
 
-	log "Including: ${YENTESTS_TEST_LIST}"
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		&& log "Including: ${YENTESTS_TEST_LIST}"
 
 fi
 
