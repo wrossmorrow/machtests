@@ -406,7 +406,8 @@ function testScript() {
 				IFS=","
 				for P in ${AFTERLINE} ; do
 					if [[ -n $( grep ${P} ${_YENTESTS_TESTS_TODO_FILE} ) ]] ; then
-						log "deferring ${YENTESTS_TEST_NAME}, ${P} not completed"
+						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "deferring \"${YENTESTS_TEST_NAME}\":: prerequisite \"${P}\" not completed"
 						deferTestScript
 						return
 					fi
@@ -699,13 +700,14 @@ Option flags:
 
 Options with arguments: 
 
-	t (csv string) - specific list of test folders to run (comma separated, regex style)
+	t (string) - specific list of test folders to run (comma separated, bash regex ok)
+	e (string) - specific list of test folders to exclude (comma separated, bash regex ok)
 	R ([0-9]+) - reset locally-stored, monotonic run index to a specific value matching [0-9]+. use with caution. 
 
 "
 
 # parse args AFTER reading .env, to effect overrides
-while getopts "hrdvlsiwLIWSt:R:" OPT ; do
+while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
@@ -716,7 +718,14 @@ while getopts "hrdvlsiwLIWSt:R:" OPT ; do
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
-		t) YENTESTS_TEST_LIST=${OPTARG} ;; 
+		t) [[ -z ${YENTESTS_TEST_EXCL} ]] \
+				&& YENTESTS_TEST_LIST=${OPTARG} \
+				|| echo "WARNING: Already provided a list to exclude, can't also provide a list to include. Ignoring the latter." \
+				;; 
+		e) [[ -z ${YENTESTS_TEST_LIST} ]] \
+				&& YENTESTS_TEST_EXCL=${OPTARG} \
+				|| echo "WARNING: Already provided a list to include, can't also provide a list to exclude. Ignoring the latter." \
+				;; 
 		R) [[ ${OPTARG} =~ ^[0-9]+$ ]] && echo "${OPTARG}" > ${YENTESTS_TEST_RIDF} ;;
 		[?]) print >&2 "Usage: $0 [-s] [-d seplist] file ..." && exit 1 ;;
 	esac
@@ -787,6 +796,30 @@ fi
 	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE} \
 	|| export _YENTESTS_TESTS_DONE_FILE="${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done"
 
+# if tests listed to exclude, make a test list with all those NON matching 
+# test suite directory names
+if [[ -n ${YENTESTS_TEST_EXCL} ]] ; then 
+
+	for d in tests/** ; do 
+
+		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
+
+		INCLUDE_TEST=0
+		while read LI ; do 
+			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then INCLUDE_TEST=1 && break ; fi
+		done < <( echo ${YENTESTS_TEST_EXCL} | tr ',' '\n' )
+		if [[ ${INCLUDE_TEST} -eq 0 ]] ; then
+			[[ -z ${YENTESTS_TEST_LIST} ]] \
+				&& YENTESTS_TEST_LIST="${TEST_SUITE_DIR}" \
+				|| YENTESTS_TEST_LIST="${YENTESTS_TEST_LIST},${TEST_SUITE_DIR}"
+		fi
+
+	done
+
+	log "Including: ${YENTESTS_TEST_LIST}"
+
+fi
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -810,10 +843,7 @@ for d in tests/** ; do
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
 		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
 		while read LI ; do 
-			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then 
-				runTestSuite ${d}
-				break
-			fi
+			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then runTestSuite ${d} && break ; fi
 		done < <( echo ${YENTESTS_TEST_LIST} | tr ',' '\n' )
 
 	else
