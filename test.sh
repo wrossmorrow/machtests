@@ -150,9 +150,13 @@ function _testCommand() {
 	# check exit code and set success flag 
 	# 
 	# This could be customized to other exit codes...
-	[[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] \
-		&& export YENTESTS_TEST_STATUS="P" \
-		|| export YENTESTS_TEST_STATUS="F"
+	if [[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] ; then 
+		export YENTESTS_TEST_STATUS="P"
+	else 
+		export YENTESTS_TEST_STATUS="F"
+		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			&& log "FAIL: ${YENTESTS_TEST_ERROR}"
+	fi
 
 	# prepare (csv) output line
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
