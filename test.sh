@@ -156,6 +156,8 @@ function _testCommand() {
 		export YENTESTS_TEST_STATUS="F"
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "FAIL: ${YENTESTS_TEST_ERROR}"
+		[[ ${YENTESTS_TEST_ERROR} =~ "No such file" ]] \
+			&& ls -al && ls -al tests
 	fi
 
 	# prepare (csv) output line
