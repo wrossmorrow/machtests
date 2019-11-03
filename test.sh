@@ -329,10 +329,11 @@ function testCommand() {
 function deferTestScript() {
 
 	# clean up customized environment
-	if [[ -f .env-revert ]] ; then 
-		set -a && source .env-revert && set +a
-		rm .env-revert
-	fi
+
+	#if [[ -f .env-revert ]] ; then 
+	#	set -a && source .env-revert && set +a
+	#	rm .env-revert
+	#fi
 
 	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
 	# unset is a shell builtin, so we can't use xargs: See
