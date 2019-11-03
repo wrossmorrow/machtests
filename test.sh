@@ -76,7 +76,7 @@ CONTACT
 function _testCommand() {
 
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-		&& log "testing command \"${1}\""
+		&& log "testing command \"${@}\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -115,8 +115,8 @@ function _testCommand() {
 			&& log "running test without a timeout"
 
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
-			&& log "++ dryrun: here we would actually run a test (without a timeout)... ++" \
-			|| { time -p ${1} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
+			&& log "++ dryrun: here we would actually run \"${@}\" (without a timeout)... ++" \
+			|| { time -p ${@} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
 
 	else # test command with timeout
 
@@ -124,9 +124,9 @@ function _testCommand() {
 			&& log "running test with timeout: ${YENTESTS_TEST_TIMEOUT}s"
 
 		[[ -n ${YENTESTS_DRY_RUN} ]] \
-			&& log "++ dryrun: here we would actually run a test (with a timeout)... ++" \
+			&& log "++ dryrun: here we would actually run \"${@}\" (with a timeout)... ++" \
 			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
-					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${1} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; }
+					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${@} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; }
 
 	fi
 	YENTESTS_TEST_EXITCODE=${?}
@@ -157,7 +157,10 @@ function _testCommand() {
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "FAIL: ${YENTESTS_TEST_ERROR}"
 		[[ ${YENTESTS_TEST_ERROR} =~ "No such file" ]] \
-			&& ls -al && ls -al tests
+			&& ls -al && ls -al tests \
+				&& echo ${YENTESTS_TEST_TIMELOG} \
+				&& echo ${YENTESTS_TEST_OUTLOG} \
+				&& echo ${YENTESTS_TEST_ERRLOG}
 	fi
 
 	# prepare (csv) output line
@@ -289,7 +292,7 @@ function _testCommand() {
 function testCommand() {
 
 	# don't do anything unless passed a command
-	if [[ -z $1 ]] ; then
+	if [[ $# -gt 0 ]] ; then
 
 		# create a hash of the test command passed
 
@@ -298,7 +301,7 @@ function testCommand() {
 		export YENTESTS_TEST_HASH=${YENTESTS_TEST_HASH}
 
 		# run the actual test command routine
-		_testCommand ${1}
+		_testCommand $@
 
 	fi
 
@@ -563,7 +566,7 @@ function testScript() {
 
 		# run the test
 		log "starting \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_FILE})" 
-		_testCommand "bash ${YENTESTS_TEST_FILE}" 
+		_testCommand bash ${YENTESTS_TEST_FILE}
 		log "finished \"${YENTESTS_TEST_NAME}\" (${YENTESTS_TEST_STATUS})"
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -617,11 +620,11 @@ function runTestSuite() {
 	# 
 	if [[ -d tests ]] ; then 
 
-		# empty "done" file
+		# empty "done" and "todo" file(s)
 		> ${_YENTESTS_TESTS_DONE_FILE}
+		> ${_YENTESTS_TESTS_TODO_FILE}
 		
 		# setup "todo" file
-		> ${_YENTESTS_TESTS_TODO_FILE}
 		TMP_TEST_COUNT=0
 		for T in tests/*.sh ; do
 			TMP_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${T} )
@@ -632,15 +635,12 @@ function runTestSuite() {
 			TMP_TEST_COUNT=$(( TMP_TEST_COUNT + 1 ))
 		done
 
-		for I in `seq 1 $( wc -l < ${_YENTESTS_TESTS_TODO_FILE} )` ; do 
-
+		# loop through the count, break "early" if finished ("todo" file empty)
+		for I in `seq 1 ${TMP_TEST_COUNT}` ; do 
 			while read S ; do 
 				[[ -f "tests/${S}" ]] && testScript "tests/${S}"
 			done < <( cat ${_YENTESTS_TESTS_TODO_FILE} | cut -d, -f1 )
-
-			# break if todo file is empty
 			[[ $( wc -l < ${_YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
-
 		done
 
 		# clean up 
