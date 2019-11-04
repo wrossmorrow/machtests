@@ -910,12 +910,14 @@ for d in tests/** ; do
 done
 
 # upload to s3 if we upload to s3
-if [[ -n ${_YENTESTS_UPLOAD_TO_S3} \
-		&& -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
-	aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
-		"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
-	rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
-
+if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
+	if [[ -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
+		aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
+			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
+		rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
+	else 
+		echo "upload to S3, but \"${YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
+	fi 
 fi 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
