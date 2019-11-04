@@ -62,6 +62,8 @@ CONTACT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 function unsetEnvVarsMatchingPrefix() {
+	env | grep "^${1}" | awk -F'=' '{ print $1 }'
+
 	env | grep "^${1}" | awk -F'=' '{ print $1 }' | xargs -i unset {}
 }
 
