@@ -540,9 +540,9 @@ function testScript() {
 							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						else 
 							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "using existing hash log file line..."
-							echo ${YENTESTS_TEST_HASH_LINE}
-							echo ${PWD}/${YENTESTS_TEST_FILE}
+							
 							echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|"
+
 							YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						fi
 
