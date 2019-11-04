@@ -267,17 +267,17 @@ function _testCommand() {
 		log "to influxdb: ${YENTESTS_INFLUXDB_URL}"
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
-		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
+		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${YENTESTS_TMP_LOG_DIR}/curl.log \
 						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
 		if [[ ${CURL_STAT} -ne 204 ]] ; then 
 			log "post to influxdb appears to have failed (${CURL_STAT})"
-			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
-				&& cat ${TMP_LOG_DIR}/curl.log
+			[[ -f ${YENTESTS_TMP_LOG_DIR}/curl.log ]] \
+				&& cat ${YENTESTS_TMP_LOG_DIR}/curl.log
 		else
 			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "wrote test summary data to influxdb"
 		fi
-		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
+		rm ${YENTESTS_TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -287,8 +287,8 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	# clean up log files
-	for f in "time" "output" "error" ; do  
-		rm -f "${YENTESTS_TMP_LOG_DIR}/${f}.log" > /dev/null
+	for f in "time" "output" "error" "curl" ; do  
+		rm -f "${YENTESTS_TMP_LOG_DIR}/${f}.log" > /dev/null 2>&1 
 	done
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
