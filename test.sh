@@ -535,13 +535,14 @@ function testScript() {
 
 						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|p" )
 						if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
-							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-								&& log "changing hash log file line..."
+							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "changing hash log file line..."
 							YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						else 
-							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-								&& log "using existing hash log file line..."
+							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "using existing hash log file line..."
+							echo ${YENTESTS_TEST_HASH_LINE}
+							echo ${PWD}/${YENTESTS_TEST_FILE}
+							echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|"
 							YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						fi
 
