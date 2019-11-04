@@ -5,7 +5,7 @@ GSB's yen research computing servers.
 
 DESCRIPTION
 
-
+  This code is the infrastructure for running regular tests on the yens. 
 
 ARGUMENTS 
 
@@ -56,18 +56,7 @@ CONTACT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
 # test command and setup result variables
-# $1 = command to test
-# 
-# This function expects the following to be defined: 
-# 
-# 	TBD
-# 
-# This function defines (locally) the following: 
-# 
-# 	YENTESTS_TEST_EXITCODE - 
-# 	YENTESTS_TEST_OUTPUT   - 
-# 	YENTESTS_TEST_DURATION - 
-# 	YENTESTS_TEST_STATUS   - 
+# $@ = commands, options to test
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -171,6 +160,8 @@ function _testCommand() {
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_MEM_USED},${TMP_MEM_AVAIL}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
 
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}"
+
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
 	# FINISHED TEST
@@ -178,10 +169,32 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then
-		log "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}"
+		log "${YENTESTS_TEST_OUTCSV}"
 	else 
-		echo "${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
+		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
 	fi
+
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# 
+	# WRITE RESULTS TO SQLITE
+	# 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+
+
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# 
+	# WRITE (CSV) RESULTS TO S3
+	# 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+	# how to handle this efficiently? write every-single-result to S3, or combine into a host-test-batch? 
+	
+	if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then 
+		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv 
+	fi
+
+	# when all tests are finished, we'll use the AWS CLI to upload
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -221,6 +234,8 @@ function _testCommand() {
 	# 		cpu05  - 
 	# 		cpu10  - 
 	# 		cpu15  - 
+	#		mema   - 
+	#		memu   - 
 	#		rprocs - the number of processes currently running (<= # cpus)
 	#		nprocs - the number of processes currently defined
 	# 
@@ -788,6 +803,16 @@ export -f log
 # construct a usable influxdb URL ("global" env var)
 export _YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
 
+if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
+		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
+		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
+	echo "looks like S3 defined"
+	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}
+	[[ $? -eq 0 ]] && YENTESTS_UPLOAD_TO_S3==1
+fi
+[[ -n ${YENTESTS_UPLOAD_TO_S3} ]] \
+	&& echo "looks like S3 connection is ok"
+
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
 # test runs "chronologically" according to the partial order thus 
@@ -880,6 +905,13 @@ for d in tests/** ; do
 	fi 
 
 done
+
+# upload to s3 if we upload to s3
+if [[ -n ${YENTESTS_UPLOAD_TO_S3} && -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
+	aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
+		"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
+	rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
+fi 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
