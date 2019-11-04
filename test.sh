@@ -807,10 +807,11 @@ if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
 		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
 		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
 	echo "looks like S3 defined"
-	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}
-	[[ $? -eq 0 ]] && YENTESTS_UPLOAD_TO_S3==1
+	_YENTESTS_AWS_COMMAND="AWS_ACCESS_KEY_ID=${YENTESTS_S3_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${YENTESTS_S3_SECRET_ACCESS_KEY} aws"
+	${_YENTESTS_AWS_COMMAND} s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}
+	[[ $? -eq 0 ]] && _YENTESTS_UPLOAD_TO_S3==1
 fi
-[[ -n ${YENTESTS_UPLOAD_TO_S3} ]] \
+[[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] \
 	&& echo "looks like S3 connection is ok"
 
 # read TEST_ID from a file here, in the home directory. this will be 
@@ -907,8 +908,9 @@ for d in tests/** ; do
 done
 
 # upload to s3 if we upload to s3
-if [[ -n ${YENTESTS_UPLOAD_TO_S3} && -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
-	aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
+if [[ -n ${_YENTESTS_UPLOAD_TO_S3} \
+		&& -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
+	${_YENTESTS_AWS_COMMAND} s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
 		"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
 	rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
 fi 
