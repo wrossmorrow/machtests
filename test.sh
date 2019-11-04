@@ -62,7 +62,7 @@ CONTACT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 function unsetEnvVarsMatchingPrefix() {
-	env | grep "^${1}" | awk -F'=' '{ print $2 }' | xargs -i unset {}
+	env | grep "^${1}" | awk -F'=' '{ print $1 }' | xargs -i unset {}
 }
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -264,8 +264,7 @@ function _testCommand() {
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		log "to influxdb: ${YENTESTS_INFLUXDB_URL}"
-		log "to influxdb: ${TMP_INFLUXDB_DATA}"
+		log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
 	else 
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${YENTESTS_TMP_LOG_DIR}/curl.log \
 						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
@@ -771,9 +770,9 @@ if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
 	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX} > /dev/null
 	[[ $? -eq 0 ]] && YENTESTS_UPLOAD_TO_S3==1
 fi
-[[ -n ${YENTESTS_VERBOSE_LOGS} \
-		&& -n ${YENTESTS_UPLOAD_TO_S3} ]] \
-	&& echo "looks like S3 connection is defined and ok"
+
+[[ -n ${YENTESTS_VERBOSE_LOGS} && -n ${YENTESTS_UPLOAD_TO_S3} ]] \
+	&& log "looks like S3 connection is defined and ok"
 
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
