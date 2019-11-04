@@ -86,16 +86,16 @@ function _testCommand() {
 	TMP_PROC_INFO_N=$( echo ${TMP_CPU_INFO} | awk '{ print $4 }' | awk -F'/' '{ print $2 }' )
 
 	# get and parse mem usage info
-	head -n 3 /proc/meminfo > "${YENTESTS_TMP_LOG_DIR}/mem.log"
-	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
-	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
+	head -n 3 /proc/meminfo > "${_YENTESTS_TMP_LOG_DIR}/mem.log"
+	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${_YENTESTS_TMP_LOG_DIR}/mem.log" )
+	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${_YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_USED=$(( TMP_MEM_TOTAL - TMP_MEM_AVAIL ))
-	rm "${YENTESTS_TMP_LOG_DIR}/mem.log"
+	rm "${_YENTESTS_TMP_LOG_DIR}/mem.log"
     
 	# set temporary log files for catching test run output
-	YENTESTS_TEST_TIMELOG="${YENTESTS_TMP_LOG_DIR}/time.log"
-	YENTESTS_TEST_OUTLOG="${YENTESTS_TMP_LOG_DIR}/output.log"
-	YENTESTS_TEST_ERRLOG="${YENTESTS_TMP_LOG_DIR}/error.log"
+	YENTESTS_TEST_TIMELOG="${_YENTESTS_TMP_LOG_DIR}/time.log"
+	YENTESTS_TEST_OUTLOG="${_YENTESTS_TMP_LOG_DIR}/output.log"
+	YENTESTS_TEST_ERRLOG="${_YENTESTS_TMP_LOG_DIR}/error.log"
 
 	# use env var to signal whether to use a timeout
 	if [[ -z ${YENTESTS_TEST_TIMEOUT} ]] ; then
@@ -191,7 +191,7 @@ function _testCommand() {
 	# how to handle this efficiently? write every-single-result to S3, or combine into a host-test-batch? 
 	
 	if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
-		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv 
+		echo "${YENTESTS_TEST_OUTCSV}" >> ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv 
 	fi
 
 	# when all tests are finished, we'll use the AWS CLI to upload
@@ -272,7 +272,7 @@ function _testCommand() {
 
 	# clean up log files
 	for f in "time" "output" "error" ; do  
-		rm -f "${YENTESTS_TMP_LOG_DIR}/${f}.log" > /dev/null
+		rm -f "${_YENTESTS_TMP_LOG_DIR}/${f}.log" > /dev/null
 	done
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -763,9 +763,9 @@ shift $(( ${OPTIND} - 1 ))
 mkdir -p ${YENTESTS_TEST_LOGS}
 
 # create location of temporary log dir and make sure it exists
-YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp"
-export YENTESTS_TMP_LOG_DIR
-mkdir -p ${YENTESTS_TMP_LOG_DIR}
+_YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp"
+export _YENTESTS_TMP_LOG_DIR
+mkdir -p ${_YENTESTS_TMP_LOG_DIR}
 
 # make sure results location exists
 mkdir -p ${YENTESTS_TEST_RESULTS%/*}
@@ -845,12 +845,12 @@ fi
 # define "todo" file, if not customized
 [[ -n ${YENTESTS_TESTS_TODO_FILE} ]] \
 	&& export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TESTS_TODO_FILE} \
-	|| export _YENTESTS_TESTS_TODO_FILE="${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo"
+	|| export _YENTESTS_TESTS_TODO_FILE="${_YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo"
 
 # define "done" file, if not customized
 [[ -n ${YENTESTS_TESTS_DONE_FILE} ]] \
 	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE} \
-	|| export _YENTESTS_TESTS_DONE_FILE="${YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done"
+	|| export _YENTESTS_TESTS_DONE_FILE="${_YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done"
 
 # if tests listed to exclude, make a test list with all those NON matching 
 # test suite directory names
@@ -911,12 +911,12 @@ done
 
 # upload to s3 if we upload to s3
 if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
-	if [[ -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
-		aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
+	if [[ -f ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
+		aws s3 cp ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv \
 			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
-		rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
+		rm ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv
 	else 
-		echo "upload to S3, but \"${YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
+		echo "upload to S3, but \"${_YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
 	fi 
 fi 
 
