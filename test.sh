@@ -304,17 +304,6 @@ function _testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
 # test a command only, and setup result variables
-# 
-# This function expects the following to be defined: 
-# 
-# 	
-# 
-# This function defines (and exports) the following:
-# 
-#	YENTESTS_TEST_NAME - 
-#	YENTESTS_TEST_VERSION - the test version, as read from frontmatter
-#	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
-#	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
 #	
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -544,14 +533,15 @@ function testScript() {
 
 					else 
 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-							&& log "changing hash log file line..."
-
 						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|p" )
 						if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
+							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+								&& log "changing hash log file line..."
 							YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
 						else 
+							[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+								&& log "using existing hash log file line..."
 							YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						fi
 
