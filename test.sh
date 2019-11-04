@@ -64,7 +64,7 @@ CONTACT
 
 function _testCommand() {
 
-	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+	[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 		&& log "testing command \"${@}\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -100,19 +100,19 @@ function _testCommand() {
 	# use env var to signal whether to use a timeout
 	if [[ -z ${YENTESTS_TEST_TIMEOUT} ]] ; then
 
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test without a timeout"
 
-		[[ -n ${YENTESTS_DRY_RUN} ]] \
+		[[ -n ${_YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run \"${@}\" (without a timeout)... ++" \
 			|| { time -p ${@} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; } > ${YENTESTS_TEST_TIMELOG} 2>&1
 
 	else # test command with timeout
 
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "running test with timeout: ${YENTESTS_TEST_TIMEOUT}s"
 
-		[[ -n ${YENTESTS_DRY_RUN} ]] \
+		[[ -n ${_YENTESTS_DRY_RUN} ]] \
 			&& log "++ dryrun: here we would actually run \"${@}\" (with a timeout)... ++" \
 			|| { timeout --preserve-status ${YENTESTS_TEST_TIMEOUT} \
 					/usr/bin/time -p -o ${YENTESTS_TEST_TIMELOG} ${@} > ${YENTESTS_TEST_OUTLOG} 2> ${YENTESTS_TEST_ERRLOG} ; }
@@ -143,7 +143,7 @@ function _testCommand() {
 		export YENTESTS_TEST_STATUS="P"
 	else 
 		export YENTESTS_TEST_STATUS="F"
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "FAIL: ${YENTESTS_TEST_ERROR}"
 		[[ ${YENTESTS_TEST_ERROR} =~ "No such file" ]] \
 			&& ls -al && ls -al tests \
@@ -153,7 +153,7 @@ function _testCommand() {
 	fi
 
 	# prepare (csv) output line
-	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
+	YENTESTS_TEST_OUTCSV="${_YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
@@ -168,7 +168,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then
+	if [[ -n ${_YENTESTS_DRY_RUN} ]] ; then
 		log "${YENTESTS_TEST_OUTCSV}"
 	else 
 		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
@@ -189,6 +189,7 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	# how to handle this efficiently? write every-single-result to S3, or combine into a host-test-batch? 
+	# I think host-tests batch
 	
 	if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
 		echo "${YENTESTS_TEST_OUTCSV}" >> ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv 
@@ -217,7 +218,7 @@ function _testCommand() {
 	#		tout - flag for timeout
 	# 		runid? currently a field
 	# 
-	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
+	TMP_INFLUXDB_TAGS="host=${_YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
 	[[ ${YENTESTS_TEST_STATUS} =~ "F" ]] \
@@ -239,16 +240,16 @@ function _testCommand() {
 	#		rprocs - the number of processes currently running (<= # cpus)
 	#		nprocs - the number of processes currently defined
 	# 
-	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
+	TMP_INFLUXDB_FIELDS="runid=${_YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memu=${TMP_MEM_USED},mema=${TMP_MEM_AVAIL}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
 
 	# construct LPF string
-	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
+	TMP_INFLUXDB_DATA="${_YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 	# post data to the yentests database in InfluxDB
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+	if [[ -n ${_YENTESTS_DRY_RUN} ]] ; then 
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
@@ -258,7 +259,7 @@ function _testCommand() {
 			[[ -f ${TMP_LOG_DIR}/curl.log ]] \
 				&& cat ${TMP_LOG_DIR}/curl.log
 		else
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "wrote test summary data to influxdb"
 		fi
 		rm ${TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
@@ -309,11 +310,7 @@ function testCommand() {
 	# don't do anything unless passed a command
 	if [[ $# -gt 0 ]] ; then
 
-		# create a hash of the test command passed
-
-		# export a test id to store ** NOT CONCURRENT SAFE **
-		export YENTESTS_TEST_NAME=${YENTESTS_TEST_NAME}
-		export YENTESTS_TEST_HASH=${YENTESTS_TEST_HASH}
+		# ALOT TBD
 
 		# run the actual test command routine
 		_testCommand $@
@@ -327,18 +324,6 @@ function testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
 # test a script and setup result variables
-# 
-# This function expects the following to be defined: 
-# 
-# 	
-# 
-# This function defines (and exports) the following:
-# 
-#	YENTESTS_TEST_FILE - the filename passed here (excluding its path up to PWD)
-#	YENTESTS_TEST_NAME - the given test name, from the environment or from 
-#	YENTESTS_TEST_VERSION - the test version, as read from frontmatter
-#	YENTESTS_TEST_HASH_VERSION - the test version in the current hash log file
-#	YENTESTS_TEST_HASH - the hash of the test script, used to id tests
 #	
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -348,10 +333,10 @@ function deferTestScript() {
 
 	# clean up customized environment
 
-	#if [[ -f .env-revert ]] ; then 
-	#	set -a && source .env-revert && set +a
-	#	rm .env-revert
-	#fi
+	if [[ -f .env-revert ]] ; then 
+		set -a && source .env-revert && set +a
+		rm .env-revert
+	fi
 
 	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
 	# unset is a shell builtin, so we can't use xargs: See
@@ -396,7 +381,7 @@ function testScript() {
 		# start exporting all variable definitions included below
 		set -a
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "loading environment..."
 
 			# load default variables and any environment variables specific to this test suite
@@ -444,7 +429,7 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
 
 			# define (and export) the test's name, as extracted from the script's frontmatter
@@ -463,7 +448,7 @@ function testScript() {
 				IFS=","
 				for P in ${AFTERLINE} ; do
 					if [[ -n $( grep ${P} ${_YENTESTS_TESTS_TODO_FILE} ) ]] ; then
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "deferring \"${YENTESTS_TEST_NAME}\":: prerequisite \"${P}\" not completed"
 						deferTestScript
 						return
@@ -477,7 +462,7 @@ function testScript() {
 				if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
 					TMPLINE=$( python -c "from random import random; print( random() <= ${TMPLINE} )" )
 					if [[ ${TMPLINE} =~ True ]] ; then 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
 						YENTESTS_TEST_STATUS='S'
 						exitTestScript
@@ -485,20 +470,20 @@ function testScript() {
 					fi 
 				else 
 					# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
-					if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
+					if [[ $(( ${_YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by _YENTESTS_TEST_RUNID."
 						YENTESTS_TEST_STATUS='S'
 						exitTestScript
 						return
 					else 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-							&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by YENTESTS_TEST_RUNID."
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
+							&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by _YENTESTS_TEST_RUNID."
 					fi
 				fi
 			else 
 				TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\0|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
-				[[ -n ${TMPLINE} ]] && [[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				[[ -n ${TMPLINE} ]] && [[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 					&& log "@skip provided in frontmatter but seems to be malformed..."
 			fi
 
@@ -523,33 +508,33 @@ function testScript() {
 			# 
 			# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 				&& log "reading/creating test script hash..."
 
 			# if we have a hash log file to store hashes in, use that
-			if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
+			if [[ -n ${_YENTESTS_HASH_LOG} ]] ; then 
 
-				if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
+				if [[ -f ${_YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
 
 					# find the hash of this test-version to use as a test id across runs, or create/update it
-					YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
+					YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${_YENTESTS_HASH_LOG} )
 					if [[ -z ${YENTESTS_TEST_HASH_LINE} ]] ; then 
 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "no current hash line in hash log file..."
 
 						YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${YENTESTS_HASH_LOG}
+						echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${_YENTESTS_HASH_LOG}
 
 					else 
 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+						[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 							&& log "changing hash log file line..."
 
 						YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|p" )
 						if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
 							YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
+							sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${_YENTESTS_HASH_LOG}
 						else 
 							YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
 						fi
@@ -558,11 +543,11 @@ function testScript() {
 
 				else  # create a hash log file here
 
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 						&& log "creating hash log file..."
 
 					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${YENTESTS_HASH_LOG}
+					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${_YENTESTS_HASH_LOG}
 
 				fi 
 
@@ -731,15 +716,15 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_TEST_TIMEOUT} ]] && YENTESTS_TEST_TIMEOUT=60
 [[ -z ${YENTESTS_TEST_RIDF}    ]] && YENTESTS_TEST_RIDF=${YENTESTS_TEST_LOGS}/runid
 [[ -z ${YENTESTS_TEST_RESULTS} ]] && YENTESTS_TEST_RESULTS=${PWD}/results/${YENTESTS_TEST_HOST}
-[[ -z ${YENTESTS_HASH_LOG}     ]] && YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
+[[ -z ${_YENTESTS_HASH_LOG}     ]] && _YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
 
 # parse args AFTER reading .env, to effect overrides
 while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
-		d) YENTESTS_DRY_RUN=1 ;;
-		v) YENTESTS_VERBOSE_LOGS=1 ;;
+		d) _YENTESTS_DRY_RUN=1 ;;
+		v) _YENTESTS_VERBOSE_LOGS=1 ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
@@ -771,9 +756,9 @@ mkdir -p ${_YENTESTS_TMP_LOG_DIR}
 mkdir -p ${YENTESTS_TEST_RESULTS%/*}
 
 # create and export the log function to make it accessible in children
-if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
+if [[ -z ${_YENTESTS_RUN_LOG} ]] ; then
 
-if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+if [[ -n ${_YENTESTS_VERBOSE_LOGS} ]] ; then 
 function log() {
 	echo "$( date +"%FT%T.%N" ):${PWD}: $1"
 }
@@ -786,14 +771,14 @@ fi
 else 
 
 # make sure runlog location exists
-mkdir -p ${YENTESTS_RUN_LOG%/*}
-if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+mkdir -p ${_YENTESTS_RUN_LOG%/*}
+if [[ -n ${_YENTESTS_VERBOSE_LOGS} ]] ; then 
 function log() {
-	echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${YENTESTS_RUN_LOG}
+	echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${_YENTESTS_RUN_LOG}
 }
 else 
 function log() {
-	echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
+	echo "$( date +"%FT%T.%N" ): $1" >> ${_YENTESTS_RUN_LOG}
 }
 fi
 
@@ -801,18 +786,18 @@ fi
 export -f log
 
 # construct a usable influxdb URL ("global" env var)
-export _YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
+export _YENTESTS_INFLUXDB_URL="${_YENTESTS_INFLUXDB_HOST}:${_YENTESTS_INFLUXDB_PORT}/write?db=${_YENTESTS_INFLUXDB_DB}&u=${_YENTESTS_INFLUXDB_USER}&p=${_YENTESTS_INFLUXDB_PWD}&precision=s"
 
 # if S3 options are defined, 
-if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
-		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
-		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
-	export AWS_ACCESS_KEY_ID=${YENTESTS_S3_ACCESS_KEY_ID}
-	export AWS_SECRET_ACCESS_KEY=${YENTESTS_S3_SECRET_ACCESS_KEY}
-	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX} > /dev/null
+if [[ -n ${_YENTESTS_S3_ACCESS_KEY_ID} \
+		&& -n ${_YENTESTS_S3_SECRET_ACCESS_KEY} \
+		&& -n ${_YENTESTS_S3_BUCKET} ]] ; then 
+	export AWS_ACCESS_KEY_ID=${_YENTESTS_S3_ACCESS_KEY_ID}
+	export AWS_SECRET_ACCESS_KEY=${_YENTESTS_S3_SECRET_ACCESS_KEY}
+	aws s3 ls s3://${_YENTESTS_S3_BUCKET}/${_YENTESTS_S3_PREFIX} > /dev/null
 	[[ $? -eq 0 ]] && _YENTESTS_UPLOAD_TO_S3==1
 fi
-[[ -n ${YENTESTS_VERBOSE_LOGS} \
+[[ -n ${_YENTESTS_VERBOSE_LOGS} \
 		&& -n ${_YENTESTS_UPLOAD_TO_S3} ]] \
 	&& echo "looks like S3 connection is defined and ok"
 
@@ -820,37 +805,35 @@ fi
 # a sequential, unique index... convenient because we could compare
 # test runs "chronologically" according to the partial order thus 
 # constructed. However, it does impose a requirement for care...
-if [[ -f ${YENTESTS_TEST_RIDF} ]] ; then 
-	YENTESTS_TEST_RUNID=$( cat ${YENTESTS_TEST_RIDF} )
-	YENTESTS_TEST_RUNID=$(( YENTESTS_TEST_RUNID + 1 ))
+if [[ -f ${_YENTESTS_TEST_RIDF} ]] ; then 
+	_YENTESTS_TEST_RUNID=$( cat ${_YENTESTS_TEST_RIDF} )
+	_YENTESTS_TEST_RUNID=$(( _YENTESTS_TEST_RUNID + 1 ))
 else 
 	# at least make sure the directory exists
-	mkdir -p ${YENTESTS_TEST_RIDF%/*}
+	mkdir -p ${_YENTESTS_TEST_RIDF%/*}
 	# intialize the RUNID to 1
-	YENTESTS_TEST_RUNID=1
+	_YENTESTS_TEST_RUNID=1
 fi 
 
 # re-write the runid into the run id file
-echo "${YENTESTS_TEST_RUNID}" > ${YENTESTS_TEST_RIDF}
-export YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE 
+echo "${_YENTESTS_TEST_RUNID}" > ${_YENTESTS_TEST_RIDF}
+export _YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE 
 
 # create TEST_ID as a date-like string? that would be globally unique, 
 # but not _immediately_ comparable
 
 # at least make sure the directory exists
-if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then 
-	mkdir -p ${YENTESTS_HASH_LOG%/*}
+if [[ ! -f ${_YENTESTS_HASH_LOG} ]] ; then 
+	mkdir -p ${_YENTESTS_HASH_LOG%/*}
 fi
 
 # define "todo" file, if not customized
-[[ -n ${YENTESTS_TESTS_TODO_FILE} ]] \
-	&& export _YENTESTS_TESTS_TODO_FILE=${YENTESTS_TESTS_TODO_FILE} \
-	|| export _YENTESTS_TESTS_TODO_FILE="${_YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-todo"
+[[ -z ${_YENTESTS_TESTS_TODO_FILE} ]] \
+	&& export _YENTESTS_TESTS_TODO_FILE="${_YENTESTS_TMP_LOG_DIR}/${_YENTESTS_TEST_HOST}-todo"
 
 # define "done" file, if not customized
-[[ -n ${YENTESTS_TESTS_DONE_FILE} ]] \
-	&& export _YENTESTS_TESTS_DONE_FILE=${YENTESTS_TESTS_DONE_FILE} \
-	|| export _YENTESTS_TESTS_DONE_FILE="${_YENTESTS_TMP_LOG_DIR}/${YENTESTS_TEST_HOST}-done"
+[[ -z ${_YENTESTS_TESTS_DONE_FILE} ]] \
+	&& export _YENTESTS_TESTS_DONE_FILE="${_YENTESTS_TMP_LOG_DIR}/${_YENTESTS_TEST_HOST}-done"
 
 # if tests listed to exclude, make a test list with all those NON matching 
 # test suite directory names
@@ -872,7 +855,7 @@ if [[ -n ${YENTESTS_TEST_EXCL} ]] ; then
 
 	done
 
-	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+	[[ -n ${_YENTESTS_VERBOSE_LOGS} ]] \
 		&& log "Including: ${YENTESTS_TEST_LIST}"
 
 fi
@@ -913,7 +896,7 @@ done
 if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
 	if [[ -f ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
 		aws s3 cp ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv \
-			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
+			"s3://${_YENTESTS_S3_BUCKET}/${_YENTESTS_S3_PREFIX}/${_YENTESTS_TEST_HOST}-$( date +%s ).csv"
 		rm ${_YENTESTS_TMP_LOG_DIR}/s3upload.csv
 	else 
 		echo "upload to S3, but \"${_YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
