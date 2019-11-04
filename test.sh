@@ -190,7 +190,7 @@ function _testCommand() {
 
 	# how to handle this efficiently? write every-single-result to S3, or combine into a host-test-batch? 
 	
-	if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then 
+	if [[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] ; then 
 		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv 
 	fi
 
@@ -803,18 +803,18 @@ export -f log
 # construct a usable influxdb URL ("global" env var)
 export _YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
 
+# if S3 options are defined, 
 if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
 		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
 		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
-	echo "looks like S3 defined"
 	export AWS_ACCESS_KEY_ID=${YENTESTS_S3_ACCESS_KEY_ID}
 	export AWS_SECRET_ACCESS_KEY=${YENTESTS_S3_SECRET_ACCESS_KEY}
-	# _YENTESTS_AWS_COMMAND="AWS_ACCESS_KEY_ID=${YENTESTS_S3_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${YENTESTS_S3_SECRET_ACCESS_KEY} aws"
-	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}
+	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX} > /dev/null
 	[[ $? -eq 0 ]] && _YENTESTS_UPLOAD_TO_S3==1
 fi
-[[ -n ${_YENTESTS_UPLOAD_TO_S3} ]] \
-	&& echo "looks like S3 connection is ok"
+[[ -n ${YENTESTS_VERBOSE_LOGS} \
+		&& -n ${_YENTESTS_UPLOAD_TO_S3} ]] \
+	&& echo "looks like S3 connection is defined and ok"
 
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
@@ -915,6 +915,7 @@ if [[ -n ${_YENTESTS_UPLOAD_TO_S3} \
 	aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
 		"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
 	rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
+
 fi 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
