@@ -264,6 +264,7 @@ function _testCommand() {
 
 	# post data to the yentests database in InfluxDB
 	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+		log "to influxdb: ${YENTESTS_INFLUXDB_URL}"
 		log "to influxdb: ${TMP_INFLUXDB_DATA}"
 	else 
 		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${TMP_LOG_DIR}/curl.log \
