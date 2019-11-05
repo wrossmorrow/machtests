@@ -869,8 +869,13 @@ done
 if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then 
 	if [[ -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
 		aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
-			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv"
-		rm ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
+			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv" \
+			> ${YENTESTS_TMP_LOG_DIR}/s3upload.log 2>&1
+		if [[ $? -ne 0 ]] ; then 
+			log "post to S3 appears to have failed..."
+			cat ${YENTESTS_TMP_LOG_DIR}/s3upload.log
+		fi 
+		rm ${YENTESTS_TMP_LOG_DIR}/s3upload.*
 	else 
 		echo "upload to S3, but \"${YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
 	fi 
