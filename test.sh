@@ -718,7 +718,7 @@ function runTestSuite() {
 # tests home folder... how to customize? where do we read this from .env or from CLI? 
 # we could use whatever is inn the CURRENT environment pretty easily... 
 [[ -z ${YENTESTS_TEST_HOME} ]] \
-	&& export YENTESTS_TEST_HOME=${PWD}
+	&& export YENTESTS_TEST_HOME=${PWD} \
 	|| REVERTABLE_YENTESTS_TEST_HOME=${YENTESTS_TEST_HOME}
 
 # for this process, move to the tests home directory (trivial?)
