@@ -770,14 +770,14 @@ while getopts "hrdvlsiwDLIWSt:e:R:" OPT ; do
 done
 shift $(( ${OPTIND} - 1 ))
 
-# make sure log directory(s) exists, and is g+rw
+# make sure log directory(s) exists, and is g+rwx
 makeOpenDirectory ${YENTESTS_TEST_LOGS}
 
-# create location of temporary log dir and make sure it exists, and is g+rw
+# create location of temporary log dir and make sure it exists, and is g+rwx
 export YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp" # why is this exported, and not just in .defaults? 
 makeOpenDirectory ${YENTESTS_TMP_LOG_DIR}
 
-# make sure results location exists, and is g+rw
+# make sure results location exists, and is g+rwx
 makeOpenDirectory ${YENTESTS_TEST_RESULTS%/*}
 
 # create and export the log function to make it accessible in children
@@ -796,7 +796,7 @@ if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
 
 else 
 
-	# make sure runlog location exists, and is g+rw
+	# make sure runlog location exists, and is g+rwx
 	makeOpenDirectory ${YENTESTS_RUN_LOG%/*}
 
 	# create log function
@@ -854,7 +854,7 @@ if [[ -f ${YENTESTS_TEST_RIDF} ]] ; then
 	YENTESTS_TEST_RUNID=$( cat ${YENTESTS_TEST_RIDF} )
 	YENTESTS_TEST_RUNID=$(( YENTESTS_TEST_RUNID + 1 ))
 else 
-	# at least make sure the directory exists, and is g+rw
+	# at least make sure the directory exists, and is g+rwx
 	makeOpenDirectory ${YENTESTS_TEST_RIDF%/*}
 	# and, lacking a history, intialize the RUNID to 1
 	YENTESTS_TEST_RUNID=1
@@ -868,9 +868,11 @@ export YENTESTS_TEST_RUNID # again, export vs .defaults?
 # but not _immediately_ comparable as easily as a monotonic index, nor would
 # it be "resettable" should we want that
 
-# hashes: if using, at least make sure the directory exists, and is g+rw
-[[ -f ${YENTESTS_HASH_LOG} ]] \
-	|| makeOpenDirectory ${YENTESTS_HASH_LOG%/*}
+# hashes: if using, at least make sure the directory exists, and is g+rwx
+[[ -n ${YENTESTS_HASH_LOG} ]] \
+	&& makeOpenDirectory ${YENTESTS_HASH_LOG%/*}
+#[[ -f ${YENTESTS_HASH_LOG} ]] \
+#	|| makeOpenDirectory ${YENTESTS_HASH_LOG%/*}
 
 # define "todo" file, if not customized
 [[ -z ${YENTESTS_TESTS_TODO_FILE} ]] \
