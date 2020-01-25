@@ -100,7 +100,7 @@ YENTESTS_INFLUXDB_USER=
 YENTESTS_INFLUXDB_PWD=
 ```
 
-See the comments in `.env.template` for more information and definitions. 
+See the comments in `.env.template` for more information, including definitions and defaults (if any). 
 
 ## Creating the sqlite3 database
 
@@ -282,9 +282,13 @@ datetime , run id , test name , S/F , exit code , timeout? , duration , cpu (TBD
 
 If credentials and settings are provided, upload the `csv` data to `S3`. 
 
-## influxdb
+DOCS TBD. 
 
-Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.gsbdarc.com`. Specifically: 
+Writes to `S3` are done in batch fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay data's upload to `S3`. 
+
+## InfluxDB
+
+Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.gsbdarc.com`. But you could change the host with a setting in `.env`. Specifically we write following: 
 
 * Database: `yentests`
 * Mesurement: `yentests`
@@ -303,6 +307,8 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
     * `memu`, `mema`: the used and available memory (RAM and swap) when the test started
     * `rprocs`, `nprocs`: the number of running and total processes when the test started
 *  `time`: the _start_ time of the test, at second precision
+
+Like `S3` uploads, writes to InfluxDB are done in batch fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay data's ingestion in InfluxDB. 
 
 ---
 

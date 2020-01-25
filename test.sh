@@ -968,7 +968,7 @@ if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then
 		fi 
 		rm ${YENTESTS_TMP_LOG_DIR}/s3upload.*
 	else 
-		echo "upload to S3, but \"${YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
+		log "We thought we should upload to S3, but \"${YENTESTS_TMP_LOG_DIR}/s3upload.csv\" is not defined"
 	fi 
 fi 
 
@@ -982,7 +982,7 @@ if [[ -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] ; then
 			&& cat ${YENTESTS_TMP_LOG_DIR}/curl.log
 	else
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-			&& log "wrote test summary data to influxdb"
+			&& log "wrote test summary data to InfluxDB"
 	fi
 	rm ${YENTESTS_TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
 fi
