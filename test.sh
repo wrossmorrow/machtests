@@ -617,7 +617,8 @@ function runTestSuite() {
 	cd ${1}
 
 	# make sure (like really sure) we aren't using an old name
-	unset ${YENTESTS_TEST_SUITE_NAME}
+	# unset ${YENTESTS_TEST_SUITE_NAME}
+	# NOTE: this can have invalid characters
 
 	# export the suite name as a "global" env var. default is just the folder name,
 	# but if there is a .env file, we can define the name with a TEST_SUITE_NAME variable. 
