@@ -67,7 +67,7 @@ function unsetEnvVarsMatchingPrefix() {
 
 # make an "open"(-ish) directory
 function makeOpenDirectory() {
-	mkdir -p ${1} && chmod g+rw ${1}
+	mkdir -p ${1} && chmod g+rwx ${1}
 }
 
 # modify environment variables in a revertable way, as stored in .env-revert
