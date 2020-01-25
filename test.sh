@@ -281,9 +281,11 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	[[ -n ${YENTESTS_DRY_RUN} ]] \
-		&& log "${YENTESTS_TEST_OUTCSV}"
-		|| echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
+	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+		log "${YENTESTS_TEST_OUTCSV}"
+	else 
+		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
+	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
