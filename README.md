@@ -1,26 +1,49 @@
 
 # Yen Tests
 
-**Purpose:** Run easily maintanable and etensible collections of test scripts on the `yen` servers. 
+**Purpose:** Run easily maintanable and extensible collections of test scripts on the `yen` servers, ideally to identify problems on the servers before users do. 
 
-**The Why:** The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. There are also some basic task executions as tests. A _proactive_ assessment allows us to not only better understand our computing systems, but also to take action ahead of recieving user complaints. 
+**The Why:** The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us identify problems on the servers before users do. There are also some basic task executions as tests. 
 
-**Contributing:** Our testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script. Our hope is that this makes contribution, maintenance, and debugging of tests easy. 
+**Contributing:** The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
 
-**How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
+**How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
-**Dependencies:** Our tests should be lightweight. We require only
+**Test Results:** Test results are always stored locally, on physical disk, in `csv` form. Locally storing results is important because the tests themselves test network filesystem availability, which is not something to take for granted. Ideally, these local test results could be periodically synced to network filesystems for replication, when those systems are available. But we should run tests and collect results regardless of their availability. 
 
-* `bash`
-* `sqlite3` software and starter database (if you want to use it)
-* An AWS account, `S3` bucket and write credentials (if you want to use it)
-* A machine/instance/cluster running `influxdb` (if you want to use it). 
+Each row of the `csv` results has the following fields, in order: 
+
+```
+    datetime of test run,
+    test runid (for a given run of test.sh),
+    test name,
+    status (i.e., pass/fail),
+    timedout?,
+    test script exit code,
+    duration of test script run,
+    error from test script run, if any,
+    machine's  5m cpu usage at test start,
+    machine's 10m cpu usage at test start,
+    machine's 15m cpu usage at test start,
+    memory used at test start,
+    memory available at test start,
+    processes running at test start, 
+    processes defined at test start
+```
+
+**Dependencies:** The tests and their running infrastructure should be lightweight. We require only `bash` and, optionally, 
+
+* `sqlite3` software and starter database
+* An AWS account, `S3` bucket and write credentials
+* A machine/instance/cluster running `influxdb` and write credentials
+
+should you choose to use any of these as result storage options. 
 
 # Installing yentests
 
 ## Getting the Code
 
-Clone the repo from Bitbucket, as usual. **Note:** the repo is already cloned and tracked on the `yens` at `/ifs/yentools/yentests`. 
+First, clone the repo from Bitbucket, as usual. **Note:** the repo is already cloned and tracked on `IFS` at `/ifs/yentools/yentests`. 
 
 If you want to play with the repo outside of the normal location, say in your home folder, you can do 
 
@@ -28,13 +51,13 @@ If you want to play with the repo outside of the normal location, say in your ho
 ~$ git clone --single-branch --branch development git@bitbucket.org/circleresearch/yentests.git
 ```
 
-This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch. 
+This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch, not the `master` branch. Reserve the `master` branch for production. 
 
 ## Defining the Environment
 
-We use a `.env` file to define key data needed by the actual test script. A template is provided as `.env.template`, because you shouldn't track the `.env` file. It will have secrets you need to leave out of version control. 
+We use a `.env` file to define key data needed by the actual test script. A template is provided as `.env.template`, because we shouldn't track the `.env` file in the repo. It will have secrets you need to leave out of version control. 
 
-Here's a quick list of the variables you can define in `.env`: 
+Here's a quick list of the variables the running infrastructure will make sense of from `.env`: 
 
 ```
 YENTESTS_TEST_LOGS=
@@ -57,7 +80,7 @@ YENTESTS_INFLUXDB_USER=
 YENTESTS_INFLUXDB_PWD=
 ```
 
-See the comments in `.env.template` for more information. 
+See the comments in `.env.template` for more information and definitions. 
 
 ## Creating the sqlite3 database
 
@@ -151,19 +174,35 @@ You can run the `yentests` by hand by running the `test.sh` script in the `/ifs/
 $ cd /ifs/yentools/yentests && ./test.sh
 ```
 
-You can pass some flags to the script to control its behavior
+You should be able to run this without a `.env` file, if you can accept all the defaults. 
+
+You can pass some options to the script to control its behavior: 
 
 ``` 
--h: print help and exit
--r: reset run ids
--d: dryrun tests; that is, just setup for each test but don't actually run any of them
--v: make verbose prints to the logs
--l: "local only", meaning no S3 or influxdb (even if defined)
--w: "web only", meaning no sqlite (even if defined)
--S: Do not write data to sqlite, even if defined
--A: Do not send data to S3, even if defined
--I: Do not send data to influxdb, even if defined
+  Command line option flags: 
+
+    h - print this message and exit. 
+    r - reset locally-stored, monotonic run index. use with caution. 
+    d - do a dry-run; that is, don't actually run any tests themselves
+    v - print verbose logs for the tester
+    l - store local results only
+    s - store ONLY sqlite3 results (if configured)
+    i - store ONLY influxdb results (if configured)
+    w - store ONLY S3 results (if configured)
+    L - do NOT store local results (delete after completion)
+    S - do NOT store results in sqlite3 (even if configured)
+    I - do NOT store results in influxdb (even if configured)
+    W - do NOT store results in S3 (even if configured)
+
+  Command line options with arguments: 
+
+    t (string) - Specific list of test suites (folders) to run (comma separated, bash regex ok)
+    e (string) - Specific list of test suites (folders) to exclude (comma separated, bash regex ok)
+    R ([0-9]+) - Reset locally-stored, monotonic run index to a SPECIFIC value matching [0-9]+. Use with caution. 
+
 ```
+
+These command line options will override settings in any `.env` file included. 
 
 ## What test.sh Does
 

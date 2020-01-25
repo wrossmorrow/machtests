@@ -15,7 +15,7 @@ ARGUMENTS
     r - reset locally-stored, monotonic run index. use with caution. 
     d - do a dry-run; that is, don't actually run any tests themselves
     v - print verbose logs for the tester
-    l - store local results only (always configured)
+    l - store local results only
     s - store ONLY sqlite3 results (if configured)
     i - store ONLY influxdb results (if configured)
     w - store ONLY S3 results (if configured)
@@ -37,7 +37,8 @@ EXAMPLES
 CONTACT
 
   Data, Analytics, and Research Computing: gsb_darcresearch@stanford.edu
-  Written by Ferdi Evalle and W. Ross Morrow
+  Tests originally written by Ferdi Evalle
+  This package and infrastructure written by W. Ross Morrow
 
 "
 
@@ -51,16 +52,7 @@ CONTACT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# 
-# QUICK WAY TO UNSET VARIABLES
-# 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
+# quick way/wrapper to unset environment variables matching a prefix
 function unsetEnvVarsMatchingPrefix() {
 	while read V ; do unset ${V} ; done < <( env | grep "^${1}" | awk -F'=' '{ print $1 }' )
 }
@@ -91,7 +83,7 @@ function _testCommand() {
 	YENTESTS_TEST_START_S=$( date +%s )
 	YENTESTS_TEST_DATETIME=$( date +"%FT%T.%N" )
 
-	# get and parse CPU/load info
+	# get and parse generic machine CPU/processes info
 	TMP_CPU_INFO=$( cat /proc/loadavg )
 	TMP_CPU_INFO_05=$( echo ${TMP_CPU_INFO} | awk '{ print $1 }' )
 	TMP_CPU_INFO_10=$( echo ${TMP_CPU_INFO} | awk '{ print $2 }' )
@@ -99,7 +91,7 @@ function _testCommand() {
 	TMP_PROC_INFO_R=$( echo ${TMP_CPU_INFO} | awk '{ print $4 }' | awk -F'/' '{ print $1 }' )
 	TMP_PROC_INFO_N=$( echo ${TMP_CPU_INFO} | awk '{ print $4 }' | awk -F'/' '{ print $2 }' )
 
-	# get and parse mem usage info
+	# get and parse generic machine memory usage info
 	head -n 3 /proc/meminfo > "${YENTESTS_TMP_LOG_DIR}/mem.log"
 	TMP_MEM_TOTAL=$( sed -En 's/^MemTotal:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
 	TMP_MEM_AVAIL=$( sed -En 's/^MemAvailable:[ ]*([0-9]+) kB/\1/p' "${YENTESTS_TMP_LOG_DIR}/mem.log" )
@@ -111,6 +103,9 @@ function _testCommand() {
 	YENTESTS_TEST_OUTLOG="${YENTESTS_TMP_LOG_DIR}/output.log"
 	YENTESTS_TEST_ERRLOG="${YENTESTS_TMP_LOG_DIR}/error.log"
 
+	# 
+	# RUN THE TEST, AS ${@}, OR DRYRUN PRINT
+	# 
 	# use env var to signal whether to use a timeout
 	if [[ -z ${YENTESTS_DEFAULT_TEST_TIMEOUT} ]] ; then
 
@@ -140,6 +135,7 @@ function _testCommand() {
 		|| YENTESTS_TEST_ERROR="test error log not created"
 
 	# check time log is not empty and set duration from time log
+	# if there is no time log (or if it is empty) then the test timed out
 	if [[ -f ${YENTESTS_TEST_TIMELOG} && -s ${YENTESTS_TEST_TIMELOG} ]]; then
 		YENTESTS_TEST_DURATION=$( egrep -i '^real' ${YENTESTS_TEST_TIMELOG} | awk '{ print $2 }' )
 		TMP_TEST_TIMEDOUT='false'
@@ -147,12 +143,12 @@ function _testCommand() {
 		YENTESTS_TEST_DURATION=${YENTESTS_DEFAULT_TEST_TIMEOUT}
 		TMP_TEST_TIMEDOUT='true'
 	fi
-	# set a min value for time so the record can be caught by the kapacitor alert
+	# set a positive minimum value for time so the record can be caught by the kapacitor alert
 	[[ ${YENTESTS_TEST_DURATION} == '0.00' ]] && YENTESTS_TEST_DURATION=0.0001
 
 	# check exit code and set success flag 
 	# 
-	# This could be customized to other exit codes...
+	# NOTE: This could be customized to other exit codes... either with env or frontmatter
 	if [[ ${YENTESTS_TEST_EXITCODE} -eq 0 ]] ; then 
 		export YENTESTS_TEST_STATUS="P"
 	else 
@@ -166,7 +162,7 @@ function _testCommand() {
 				&& echo ${YENTESTS_TEST_ERRLOG}
 	fi
 
-	# prepare (csv) output line: 
+	# prepare (csv) output line, which should contain: 
 	# 
 	#   datetime,
 	#	runid,
@@ -182,15 +178,13 @@ function _testCommand() {
 	#	processes running, 
 	#	processes defined
 	# 
-	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_RUNID},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_RUNID}"
+	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_TEST_TIMEDOUT},${YENTESTS_TEST_EXITCODE}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${YENTESTS_TEST_DURATION},${YENTESTS_TEST_ERROR}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_CPU_INFO_05},${TMP_CPU_INFO_10},${TMP_CPU_INFO_15}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_MEM_USED},${TMP_MEM_AVAIL}"
 	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_OUTCSV},${TMP_PROC_INFO_R},${TMP_PROC_INFO_N}"
-
-	# prepend datetime
-	YENTESTS_TEST_OUTCSV="${YENTESTS_TEST_DATETIME},${YENTESTS_TEST_OUTCSV}"
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -210,7 +204,7 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-
+	# TBD - WRM doesn't know or care that much about SQLite
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -225,7 +219,7 @@ function _testCommand() {
 		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv 
 	fi
 
-	# when ALL tests are finished, we'll use the AWS CLI to upload... not after each test
+	# when ALL tests are finished, we'll use the AWS CLI to upload... NOT after EACH test runs
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -234,19 +228,18 @@ function _testCommand() {
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 	# NOTE: replace spaces in names (and host?) with _ to prevent invalid field format error return from 
-	# influxdb
+	# influxdb. We'll presume these occur only in the test names. 
 
 	# string we'll want to write to influxdb... 
 	# 
-	# 	tags: each of these things we might want to search/groupby over and should be indexed
+	# 	tags: each of these things we might want to search/groupby over and should be INDEXED
 	# 
 	# 		host - the host the test was run on
 	# 		test - the name of the test
-	# 		hash - the hash of the test run, like a test version number
+	# 		hash - the hash of the test run, like a test version number, even if that isn't changed in the test script
 	# 		code - the exit code from the test
 	#		fail - a simple flag to check failure
 	#		tout - flag for timeout
-	# 		runid? currently a field
 	# 
 	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
 	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
@@ -255,27 +248,26 @@ function _testCommand() {
 		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
 		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
 
-
 	# 	fields: these things we might want to plot/aggregate
 	# 
 	#		runid  - the runid of the test run (? should this be a tag?)
 	# 		xtime  - execution time of the test
 	#		cpu    - (FUTURE) the cpu utilization of the test
 	#		mem    - (FUTURE) the memory utilization of the test
-	# 		cpu05  - 
-	# 		cpu10  - 
-	# 		cpu15  - 
-	#		mema   - 
-	#		memu   - 
-	#		rprocs - the number of processes currently running (<= # cpus)
-	#		nprocs - the number of processes currently defined
+	# 		cpu05  - the  5m CPU utilization average on the machine at test start time
+	# 		cpu10  - the 10m CPU utilization average on the machine at test start time
+	# 		cpu15  - the 15m CPU utilization average on the machine at test start time
+	#		mema   - memory available on the machine at test start time
+	#		memu   - memory used on the machine at test start time
+	#		rprocs - the number of processes currently running (<= # cpus) at test start time
+	#		nprocs - the number of processes currently defined (including idle) at test start time
 	# 
 	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memu=${TMP_MEM_USED},mema=${TMP_MEM_AVAIL}"
 	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
 
-	# construct LPF string
+	# construct Line Protocol Format (LPF) string. See influxdata docs about this format
 	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 	# post data to the yentests database in InfluxDB
@@ -717,17 +709,17 @@ source /etc/profile.d/lmod.sh
 
 # set defaults for those vars that need defaults
 
-# global, not-overridable defaults
+# global defaults; test suites can't override these
 [[ -z ${YENTESTS_TEST_HOST}    ]] && YENTESTS_TEST_HOST=${HOSTNAME}
 [[ -z ${YENTESTS_TEST_LOGS}    ]] && YENTESTS_TEST_LOGS=${PWD}/logs/${YENTESTS_TEST_HOST}
-[[ -z ${YENTESTS_TEST_RIDF}    ]] && YENTESTS_TEST_RIDF=${YENTESTS_TEST_LOGS}/runid
+[[ -z ${YENTESTS_TEST_RIDF}    ]] && YENTESTS_TEST_RIDF=${YENTESTS_TEST_LOGS}/${YENTESTS_TEST_HOST}/runid
 [[ -z ${YENTESTS_TEST_RESULTS} ]] && YENTESTS_TEST_RESULTS=${PWD}/results/${YENTESTS_TEST_HOST}
 [[ -z ${YENTESTS_HASH_LOG}     ]] && YENTESTS_HASH_LOG=/tmp/yentests/test-hashes.log
 
-# locally overridable defaults
+# local defaults; test suites can overwrite these
 [[ -z ${YENTESTS_DEFAULT_TEST_TIMEOUT} ]] && YENTESTS_DEFAULT_TEST_TIMEOUT=60
 
-# parse args AFTER reading .env, to effect overrides
+# parse test.sh command line options AFTER reading .env, to effect overrides
 while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
