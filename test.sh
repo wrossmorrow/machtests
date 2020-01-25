@@ -624,7 +624,7 @@ function runTestSuite() {
 	# this will thus be accessible in subroutines here if we want to use 
 	# it to identify/tag, locate, or print anything. 
 	[[ -f .env ]] \
-		&& YENTESTS_TEST_SUITE_NAME=$( sed  -n 's/^TEST_SUITE_NAME=(.*)/\1/p' .env )
+		&& YENTESTS_TEST_SUITE_NAME=$( sed -n 's/^TEST_SUITE_NAME=\(.*\)/\1/p' .env | sed 's/^"//g;s/"$//g' )
 
 	# that might not have caught anything... 
 	[[ -z ${YENTESTS_TEST_SUITE_NAME} ]] \
@@ -706,7 +706,7 @@ function runTestSuite() {
 # 
 # PREPROCESSING: 
 # 
-# setup environment and things for all test script runs
+# setup environment and things for all test script runs. this is the longest section. 
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
