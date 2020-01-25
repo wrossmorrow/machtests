@@ -1,15 +1,25 @@
 
 # Yen Tests
 
-**Purpose:** Run easily maintanable and extensible collections of test scripts on the `yen` servers, ideally to identify problems on the servers before users do. 
+## Purpose 
 
-**The Why:** The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us identify problems on the servers before users do. There are also some basic task executions as tests. 
+Run easily maintanable and extensible collections of test scripts on the `yen` servers, ideally to identify problems on the servers before users do. 
 
-**Contributing Tests:** The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
+## Why
 
-**How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
+The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us identify problems on the servers before users do. There are also some basic task executions as tests. 
 
-**Test Results:** Test results are always stored locally, on physical disk, in `csv` form. Locally storing results is important because the tests themselves test network filesystem availability, which is not something to take for granted. Ideally, these local test results could be periodically synced to network filesystems for replication, when those systems are available. But we should run tests and collect results regardless of their availability. 
+## Contributing Tests
+
+The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
+
+## How Tests Run
+
+Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
+
+## Test Results
+
+Test results are always stored locally, on physical disk, in `csv` form. Locally storing results is important because the tests themselves test network filesystem availability, which is not something to take for granted. Ideally, these local test results could be periodically synced to network filesystems for replication, when those systems are available. But we should run tests and collect results regardless of their availability. 
 
 Each row of the `csv` results has the following fields, in order: 
 
@@ -31,7 +41,9 @@ Each row of the `csv` results has the following fields, in order:
     processes defined at test start
 ```
 
-**Dependencies:** The tests and their running infrastructure should be lightweight. We require only `bash` and, optionally, 
+## Dependencies
+
+The tests and their running infrastructure should be lightweight. We require only `bash` and, optionally, 
 
 * `sqlite3` software and starter database
 * An AWS account, `S3` bucket and write credentials
@@ -39,7 +51,9 @@ Each row of the `csv` results has the following fields, in order:
 
 should you choose to use any of these as result storage options. 
 
-**Contributing to the Infrastructure:** Ok, this is complicated. The infrastructure for running tests is really in one file, `test.sh`, for compactness if not simplicity. Some bleeds over into `.env` and `systemd` service files, but really it is all in `test.sh`. We explain this file in detail later in this readme. The file itself is, we hope, verbosely commented to assist in understanding the meaning of the code. 
+## Contributing to the Infrastructure
+
+Ok, this is complicated. The infrastructure for running tests is really in one file, `test.sh`, for compactness if not simplicity. Some bleeds over into `.env` and `systemd` service files, but really it is all in `test.sh`. We explain this file in detail later in this readme. The file itself is, we hope, verbosely commented to assist in understanding the meaning of the code. 
 
 # Installing yentests
 

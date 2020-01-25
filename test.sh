@@ -14,6 +14,7 @@ ARGUMENTS
     h - print this message and exit. 
     r - reset locally-stored, monotonic run index. use with caution. 
     d - do a dry-run; that is, don't actually run any tests themselves
+    D - KEEP defaults file, so that it can be reviewed outside of a particular call
     v - print verbose logs for the tester
     l - store local results only
     s - store ONLY sqlite3 results (if configured)
@@ -53,10 +54,23 @@ CONTACT
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # quick way/wrapper to unset environment variables matching a prefix
+# 
+# unset is a shell builtin, so we can't use xargs: See
+# 
+# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
+# 
+# for details. hence the alien monster below
+# 
 function unsetEnvVarsMatchingPrefix() {
 	while read V ; do unset ${V} ; done < <( env | grep "^${1}" | awk -F'=' '{ print $1 }' )
 }
 
+# make an "open"(-ish) directory
+function makeOpenDirectory() {
+	mkdir -p ${1} && chmod g+rw ${1}
+}
+
+# modify environment variables in a revertable way, as stored in .env-revert
 function createRevertableEnvironment() {
 
 	# store the current "global" environment
@@ -92,7 +106,7 @@ function createRevertableEnvironment() {
 }
 
 # things to do when we are "deferring" execution of a test script (say, because a
-# prerequisite testing script has not run)
+# prerequisite testing script has not run yet or has failed)
 function deferTestScript() {
 
 	# clean up any customized environment for the test script literally being run
@@ -102,11 +116,6 @@ function deferTestScript() {
 	fi
 
 	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
-	# unset is a shell builtin, so we can't use xargs: See
-	# 
-	# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
-	# 
-	# for details. hence the unsetEnvVars... wrapper
 	unsetEnvVarsMatchingPrefix "YENTESTS_DEFAULT"
 
 	[[ $( env | grep '^YENTESTS_DEFAULT' | wc -l ) -ge 1 ]] \
@@ -310,61 +319,55 @@ function _testCommand() {
 	# NOTE: replace spaces in names (and host?) with _ to prevent invalid field format error return from 
 	# influxdb. We'll presume these occur only in the test names. 
 
-	# string we'll want to write to influxdb... 
-	# 
-	# 	tags: each of these things we might want to search/groupby over and should be INDEXED
-	# 
-	# 		host - the host the test was run on
-	# 		test - the name of the test
-	# 		hash - the hash of the test run, like a test version number, even if that isn't changed in the test script
-	# 		code - the exit code from the test
-	#		fail - a simple flag to check failure
-	#		tout - flag for timeout
-	# 
-	TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
-	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
-	TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
-	[[ ${YENTESTS_TEST_STATUS} =~ "F" ]] \
-		&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
-		|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
+	if [[ -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] ; then 
 
-	# 	fields: these things we might want to plot/aggregate
-	# 
-	#		runid  - the runid of the test run (? should this be a tag?)
-	# 		xtime  - execution time of the test
-	#		cpu    - (FUTURE) the cpu utilization of the test
-	#		mem    - (FUTURE) the memory utilization of the test
-	# 		cpu05  - the  5m CPU utilization average on the machine at test start time
-	# 		cpu10  - the 10m CPU utilization average on the machine at test start time
-	# 		cpu15  - the 15m CPU utilization average on the machine at test start time
-	#		mema   - memory available on the machine at test start time
-	#		memu   - memory used on the machine at test start time
-	#		rprocs - the number of processes currently running (<= # cpus) at test start time
-	#		nprocs - the number of processes currently defined (including idle) at test start time
-	# 
-	TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
-	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
-	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memu=${TMP_MEM_USED},mema=${TMP_MEM_AVAIL}"
-	TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
+		# string we'll want to write to influxdb... 
+		# 
+		# 	tags: each of these things we might want to search/groupby over and should be INDEXED
+		# 
+		# 		host - the host the test was run on
+		# 		test - the name of the test
+		# 		hash - the hash of the test run, like a test version number, even if that isn't changed in the test script
+		# 		code - the exit code from the test
+		#		fail - a simple flag to check failure
+		#		tout - flag for timeout
+		# 
+		TMP_INFLUXDB_TAGS="host=${YENTESTS_TEST_HOST},test=${YENTESTS_TEST_NAME//[ ]/_}"
+		TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},tver=${YENTESTS_TEST_VERSION},hash=${YENTESTS_TEST_HASH}"
+		TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},code=${YENTESTS_TEST_EXITCODE},tout=${TMP_TEST_TIMEDOUT}"
+		[[ ${YENTESTS_TEST_STATUS} =~ "F" ]] \
+			&& TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=true" \
+			|| TMP_INFLUXDB_TAGS="${TMP_INFLUXDB_TAGS},fail=false"
 
-	# construct Line Protocol Format (LPF) string. See influxdata docs about this format
-	TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
+		# 	fields: these things we might want to plot/aggregate
+		# 
+		#		runid  - the runid of the test run (? should this be a tag?)
+		# 		xtime  - execution time of the test
+		#		cpu    - (FUTURE) the cpu utilization of the test
+		#		mem    - (FUTURE) the memory utilization of the test
+		# 		cpu05  - the  5m CPU utilization average on the machine at test start time
+		# 		cpu10  - the 10m CPU utilization average on the machine at test start time
+		# 		cpu15  - the 15m CPU utilization average on the machine at test start time
+		#		mema   - memory available on the machine at test start time
+		#		memu   - memory used on the machine at test start time
+		#		rprocs - the number of processes currently running (<= # cpus) at test start time
+		#		nprocs - the number of processes currently defined (including idle) at test start time
+		# 
+		TMP_INFLUXDB_FIELDS="runid=${YENTESTS_TEST_RUNID},xtime=${YENTESTS_TEST_DURATION}"
+		TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},cpu05=${TMP_CPU_INFO_05},cpu10=${TMP_CPU_INFO_10},cpu15=${TMP_CPU_INFO_15}"
+		TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},memu=${TMP_MEM_USED},mema=${TMP_MEM_AVAIL}"
+		TMP_INFLUXDB_FIELDS="${TMP_INFLUXDB_FIELDS},rprocs=${TMP_PROC_INFO_R},nprocs=${TMP_PROC_INFO_N}"
 
-	# post data to the yentests database in InfluxDB
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
-	else 
-		CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${YENTESTS_TMP_LOG_DIR}/curl.log \
-						-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${TMP_INFLUXDB_DATA}" )
-		if [[ ${CURL_STAT} -ne 204 ]] ; then 
-			log "post to influxdb appears to have failed (${CURL_STAT})"
-			[[ -f ${YENTESTS_TMP_LOG_DIR}/curl.log ]] \
-				&& cat ${YENTESTS_TMP_LOG_DIR}/curl.log
-		else
-			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-				&& log "wrote test summary data to influxdb"
+		# construct Line Protocol Format (LPF) string. See influxdata docs about this format
+		TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
+
+		# post data to the yentests database in InfluxDB
+		if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
+			log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
+		else 
+			echo "${TMP_INFLUXDB_DATA}" >> ${YENTESTS_TMP_LOG_DIR}/influxupload.lpf
 		fi
-		rm ${YENTESTS_TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
+
 	fi
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -386,7 +389,7 @@ function _testCommand() {
 
 }
 
-# this is a wrapper test command. NOTE THIS IS NOT CURRENTLY BEING CALLED
+# this is a wrapper test command. NOTE THIS IS NOT CURRENTLY BEING CALLED...
 # 
 # WHY IS THIS BEING WRAPPER? WHAT IS LEFT TO ORGANIZE? 
 # 
@@ -701,15 +704,22 @@ function runTestSuite() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
-# PREPROCESSING: SETUP ENVIRONMENT AND THINGS FOR TEST RUNS
+# PREPROCESSING: 
+# 
+# setup environment and things for all test script runs
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# tests home folder... how to customize? 
-# export YENTESTS_TEST_HOME=/ifs/yentools/yentests
-export YENTESTS_TEST_HOME=${PWD}
+# NOTE: in all the settings below we use export statements for variables that can't possibly change 
+# across test suites. On the other hand, we don't export and package into a .defaults file for those that can. 
+
+# tests home folder... how to customize? where do we read this from .env or from CLI? 
+# we could use whatever is inn the CURRENT environment pretty easily... 
+[[ -z ${YENTESTS_TEST_HOME} ]]
+	&& export YENTESTS_TEST_HOME=${PWD}
+	|| REVERTABLE_YENTESTS_TEST_HOME=${YENTESTS_TEST_HOME}
 
 # for this process, move to the tests home directory (trivial?)
 cd ${YENTESTS_TEST_HOME}
@@ -720,7 +730,7 @@ source /etc/profile.d/lmod.sh
 # setup environment variables from .env
 [[ -f .env ]] && set -a && source .env && set +a
 
-# set defaults for those vars that need defaults
+# set defaults for those vars that have defaults
 
 # global defaults; test suites can't override these
 [[ -z ${YENTESTS_TEST_HOST}    ]] && YENTESTS_TEST_HOST=${HOSTNAME}
@@ -733,7 +743,7 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_DEFAULT_TEST_TIMEOUT} ]] && YENTESTS_DEFAULT_TEST_TIMEOUT=60
 
 # parse test.sh command line options AFTER reading .env, to effect overrides
-while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
+while getopts "hrdvlsiwDLIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
@@ -741,6 +751,7 @@ while getopts "hrdvlsiwLIWSt:e:R:" OPT ; do
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		D) YENTESTS_KEEP_DEFAULTS_FILE=1 ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
@@ -759,55 +770,53 @@ done
 shift $(( ${OPTIND} - 1 ))
 
 # make sure log directory(s) exists, and is g+rw
-mkdir -p ${YENTESTS_TEST_LOGS}
-chmod g+rw ${YENTESTS_TEST_LOGS}
+makeOpenDirectory ${YENTESTS_TEST_LOGS}
 
 # create location of temporary log dir and make sure it exists, and is g+rw
-YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp"
-export YENTESTS_TMP_LOG_DIR
-mkdir -p ${YENTESTS_TMP_LOG_DIR}
-chmod g+rw ${YENTESTS_TMP_LOG_DIR}
+export YENTESTS_TMP_LOG_DIR="${YENTESTS_TEST_LOGS}/tmp" # why is this exported, and not just in .defaults? 
+makeOpenDirectory ${YENTESTS_TMP_LOG_DIR}
 
 # make sure results location exists, and is g+rw
-mkdir -p ${YENTESTS_TEST_RESULTS%/*}
-chmod g+rw ${YENTESTS_TEST_RESULTS%/*}
+makeOpenDirectory ${YENTESTS_TEST_RESULTS%/*}
 
 # create and export the log function to make it accessible in children
 if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
 
-if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
-function log() {
-	echo "$( date +"%FT%T.%N" ):${PWD}: $1"
-}
-else 
-function log() {
-	echo "$( date +"%FT%T.%N" ): $1"
-}
-fi
+	# create log function
+	if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+		function log() {
+			echo "$( date +"%FT%T.%N" ):${PWD}: $1"
+		}
+	else 
+		function log() {
+			echo "$( date +"%FT%T.%N" ): $1"
+		}
+	fi
 
 else 
 
-# make sure runlog location exists, and is g+rw
-mkdir -p ${YENTESTS_RUN_LOG%/*}
-chmod g+rw ${YENTESTS_RUN_LOG%/*}
+	# make sure runlog location exists, and is g+rw
+	makeOpenDirectory ${YENTESTS_RUN_LOG%/*}
 
-if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
-function log() {
-	echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${YENTESTS_RUN_LOG}
-}
-else 
-function log() {
-	echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
-}
-fi
+	# create log function
+	if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
+		function log() {
+			echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${YENTESTS_RUN_LOG}
+		}
+	else 
+		function log() {
+			echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
+		}
+	fi
 
 fi
 export -f log
 
 # construct a usable influxdb URL ("global" env var)
 export YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
+# is this exported in a way not reasonably accomplished with .defaults?
 
-# if S3 options are defined, 
+# if S3 options are defined, set them up and check validity
 if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
 		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
 		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
@@ -823,29 +832,29 @@ fi
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
 # test runs "chronologically" according to the partial order thus 
-# constructed. However, it does impose a requirement for care...
+# constructed. 
 if [[ -f ${YENTESTS_TEST_RIDF} ]] ; then 
+	# get and increment the monotonic index
 	YENTESTS_TEST_RUNID=$( cat ${YENTESTS_TEST_RIDF} )
 	YENTESTS_TEST_RUNID=$(( YENTESTS_TEST_RUNID + 1 ))
 else 
-	# at least make sure the directory exists
-	mkdir -p ${YENTESTS_TEST_RIDF%/*}
-	# intialize the RUNID to 1
+	# at least make sure the directory exists, and is g+rw
+	makeOpenDirectory ${YENTESTS_TEST_RIDF%/*}
+	# and, lacking a history, intialize the RUNID to 1
 	YENTESTS_TEST_RUNID=1
 fi 
 
-# re-write the runid into the run id file
+# re-write the runid into the run id file (initialized or incremented)
 echo "${YENTESTS_TEST_RUNID}" > ${YENTESTS_TEST_RIDF}
-export YENTESTS_TEST_RUNID # SHOULD BE AVAILABLE 
+export YENTESTS_TEST_RUNID # again, export vs .defaults? 
 
 # create TEST_ID as a date-like string? that would be globally unique, 
-# but not _immediately_ comparable
+# but not _immediately_ comparable as easily as a monotonic index, nor would
+# it be "resettable" should we want that
 
-# at least make sure the directory exists, and is g+rw
-if [[ ! -f ${YENTESTS_HASH_LOG} ]] ; then 
-	mkdir -p ${YENTESTS_HASH_LOG%/*}
-	chmod g+rw ${YENTESTS_HASH_LOG%/*}
-fi
+# hashes: if using, at least make sure the directory exists, and is g+rw
+[[ -f ${YENTESTS_HASH_LOG} ]] 
+	|| makeOpenDirectory ${YENTESTS_HASH_LOG%/*}
 
 # define "todo" file, if not customized
 [[ -z ${YENTESTS_TESTS_TODO_FILE} ]] \
@@ -880,11 +889,17 @@ if [[ -n ${YENTESTS_TEST_EXCL} ]] ; then
 
 fi
 
+# store relevant env vars for use in test suites... we will clean and reload this on each run
+# quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
+env | grep '^YENTESTS_DEFAULT' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
-# RUN TESTS
+# RUNNING
+# 
+# Basically just a loop over the test suites included in tests/, or specified with a list
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -892,29 +907,43 @@ fi
 
 log "starting yentests..."
 
-# store relevant env vars for use in test suites... we will clean and reload this on each run
-# quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
-env | grep '^YENTESTS_DEFAULT' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
-
 # loop over test suites...
 for d in tests/** ; do 
 
-	# if passed a list, only run tests in that list; otherwise, run ALL tests
+	# if passed a list, only run test suites in that list; otherwise, run ALL tests
 	if [[ -n ${YENTESTS_TEST_LIST} ]] ; then 
+
+		# this is a double loop, which isn't literally required. we could just scan the
+		# list, and run over those directories. but that optimization probably won't matter. 
 		TEST_SUITE_DIR=$( echo ${d} | grep -oP "[^/]*$" )
 		while read LI ; do 
 			if [[ ${TEST_SUITE_DIR} =~ ${LI} ]] ; then runTestSuite ${d} && break ; fi
 		done < <( echo ${YENTESTS_TEST_LIST} | tr ',' '\n' )
 
-	else # run all tests
+	else # no list, run all tests
+
 		runTestSuite ${d}
+
 	fi 
 
 done
 
-# upload to s3 if we upload to s3
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# 
+# POSTPROCESSING
+# 
+# "Batch" upload results to S3 and/or InfluxDB, if we are, now that tests were done. 
+# And clean up after ourselves. 
+# 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+# now that tests are done, upload to S3 IF we upload to S3
 if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then 
-	if [[ -f ${YENTESTS_TMP_LOG_DIR}/s3upload.csv ]] ; then 
+	if [[ -f ${YENTESTS_TMP_LOG_DIR}/sf3upload.csv ]] ; then 
 		aws s3 cp ${YENTESTS_TMP_LOG_DIR}/s3upload.csv \
 			"s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX}/${YENTESTS_TEST_HOST}-$( date +%s ).csv" \
 			> ${YENTESTS_TMP_LOG_DIR}/s3upload.log 2>&1
@@ -928,21 +957,30 @@ if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then
 	fi 
 fi 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# 
-# POSTPROCESSING
-# 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# now that tests are done, upload to InfluxDB IF we upload to InfluxDB
+if [[ -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] ; then
+	CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${YENTESTS_TMP_LOG_DIR}/curl.log \
+					-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${YENTESTS_TMP_LOG_DIR}/influxdbupload.lpf" )
+	if [[ ${CURL_STAT} -ne 204 ]] ; then 
+		log "post to influxdb appears to have failed (${CURL_STAT})"
+		[[ -f ${YENTESTS_TMP_LOG_DIR}/curl.log ]] \
+			&& cat ${YENTESTS_TMP_LOG_DIR}/curl.log
+	else
+		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			&& log "wrote test summary data to influxdb"
+	fi
+	rm ${YENTESTS_TMP_LOG_DIR}/curl.log > /dev/null 2>&1 
+fi
 
-# don't need .defaults anymore
-rm .defaults > /dev/null
+# don't need .defaults anymore... delete if we don't explicitly say to keep
+[[ -z ${YENTESTS_KEEP_DEFAULTS_FILE} ]] 
+	&& rm .defaults > /dev/null 2>&1
 
-# don't need the "global" environment variables (YENTESTS_*) anymore
-while read V ; do unset $V ; done < <( env | grep '^YENTESTS_' | awk -F'=' '{ print $1 }' )
+# don't need the "global" environment variables (YENTESTS_*) anymore, EXCEPT any existing YENTESTS_TEST_HOME?
+# that's a problem, which I hope we correct with a post-cleaning reset
+unsetEnvVarsMatchingPrefix "YENTESTS_"
+[[ -n ${REVERTABLE_YENTESTS_TEST_HOME} ]]
+	&& export YENTESTS_TEST_HOME=${REVERTABLE_YENTESTS_TEST_HOME}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
