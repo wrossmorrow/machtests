@@ -57,6 +57,85 @@ function unsetEnvVarsMatchingPrefix() {
 	while read V ; do unset ${V} ; done < <( env | grep "^${1}" | awk -F'=' '{ print $1 }' )
 }
 
+function createRevertableEnvironment() {
+
+	# store the current "global" environment
+	env > .env-global
+
+	# do overwrites or definitions from the test suite, should it exxist
+	source .env
+
+	# capture any changes by writing to a local environment file, and then comparing
+	# that to the global one
+	env > .env-local
+	grep -vxFf .env-global .env-local > .env-changes
+
+	# ok, so if a variable EXISTS in .env-changes AND it...
+	# 
+	# 	does NOT exist in .env-global, then we should UNSET it when done
+	# 	DOES exist in .env-global, then we should REVERT to its previous value
+	# 
+
+	# list variables that existed before and were changed
+	cat .env-global  | sed -En 's/^([A-Z][^=]*)=(.*)/^\1/Ip' > .env-global-vars
+
+	# unset those declarations that were added
+	cat .env-changes | grep -vf .env-global-vars | awk -F'=' '{ print "unset "$1 }' > .env-revert
+
+	# filter the previous env to that list
+	cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
+	cat .env-global  | grep -f .env-changed-vars >> .env-revert
+
+	# clean up
+	rm .env-global .env-local .env-changes .env-global-vars .env-changed-vars
+
+}
+
+# things to do when we are "deferring" execution of a test script (say, because a
+# prerequisite testing script has not run)
+function deferTestScript() {
+
+	# clean up any customized environment for the test script literally being run
+	if [[ -f .env-revert ]] ; then 
+		set -a && source .env-revert && set +a
+		rm .env-revert
+	fi
+
+	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
+	# unset is a shell builtin, so we can't use xargs: See
+	# 
+	# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
+	# 
+	# for details. hence the unsetEnvVars... wrapper
+	unsetEnvVarsMatchingPrefix "YENTESTS_DEFAULT"
+
+	[[ $( env | grep '^YENTESTS_DEFAULT' | wc -l ) -ge 1 ]] \
+		&& log "WARNING: looks like environment wasn't cleaned properly..."
+
+}
+
+# a custom "exit" routine to call that does variable clean up. this is important
+# to wrap in case we bail early due to skipping logic
+function exitTestScript() {
+	
+	TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
+
+	# modify "todo" file by deleting matching line for this test
+	if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
+		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
+		rm ${YENTESTS_TESTS_TODO_FILE}.bak
+	fi
+
+	# append information to "done" file
+	if [[ -f ${YENTESTS_TESTS_DONE_FILE} ]] ; then 
+		echo "${TMP_FILE_NAME},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TESTS_DONE_FILE}
+	fi
+
+	# run the cleanup associated with deferment (which is nested "under" a clean exit)
+	deferTestScript
+
+}
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -68,6 +147,7 @@ function unsetEnvVarsMatchingPrefix() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+# this is the "real" command testing function. 
 function _testCommand() {
 
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
@@ -306,16 +386,10 @@ function _testCommand() {
 
 }
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# this is a wrapper test command. NOTE THIS IS NOT CURRENTLY BEING CALLED
 # 
-# test a command only, and setup result variables
-#	
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
+# WHY IS THIS BEING WRAPPER? WHAT IS LEFT TO ORGANIZE? 
+# 
 function testCommand() {
 
 	# don't do anything unless passed a command
@@ -332,57 +406,13 @@ function testCommand() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
-# test a script and setup result variables
+# TEST A SCRIPT AND SETUP RESULT VARIABLES
 #	
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-function deferTestScript() {
-
-	# clean up customized environment
-
-	if [[ -f .env-revert ]] ; then 
-		set -a && source .env-revert && set +a
-		rm .env-revert
-	fi
-
-	# IMPORTANT!! unset any YENTESTS_ vars to run the next test suite "clean"
-	# unset is a shell builtin, so we can't use xargs: See
-	# 
-	# 	https://unix.stackexchange.com/questions/209895/unset-all-env-variables-matching-proxy
-	# 
-
-	unsetEnvVarsMatchingPrefix "YENTESTS_DEFAULT"
-
-	[[ $( env | grep '^YENTESTS_DEFAULT' | wc -l ) -ge 1 ]] \
-		&& log "WARNING: looks like environment wasn't cleaned properly..."
-
-}
-
-# a custom "exit" routine to call below, that does variable clean up. this is important
-# to wrap in case we bail early due to skipping logic
-function exitTestScript() {
-	
-	TMP_FILE_NAME=$( echo ${YENTESTS_TEST_FILE} | grep -oP '[^/]*$' )
-
-	# modify "todo" file by deleting matching line for this test
-	if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
-		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
-		rm ${YENTESTS_TESTS_TODO_FILE}.bak
-	fi
-
-	# append information to "done" file
-	if [[ -f ${YENTESTS_TESTS_DONE_FILE} ]] ; then 
-		echo "${TMP_FILE_NAME},${YENTESTS_TEST_NAME},${YENTESTS_TEST_STATUS}" >> ${YENTESTS_TESTS_DONE_FILE}
-	fi
-
-	# run the cleanup defined above
-	deferTestScript
-
-}
-
-# ok, test scripts themselves
+# function to test scripts themselves
 function testScript() {
 
 	# don't do anything unless passed a "real" file
@@ -394,51 +424,20 @@ function testScript() {
 		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 			&& log "loading environment..."
 
-		# load default variables and any environment variables specific to this test suite
+		# load DEFAULT variables (for all tests) AND any environment variables specific to this test suite
 		# also, though, store which variables the local .env file adds or alters, so we can take 
-		# them away later
+		# them away later to revert to a "clean" environment
 		source ${YENTESTS_TEST_HOME}/.defaults
 
 		# load environment variables stored for a test suite, carefully
-		if [[ -f .env ]] ; then 
+		[[ -f .env ]] && createRevertableEnvironment 
 
-			# store the current "global" environment
-			env > .env-global
-
-			# do overwrites or definitions from the test suite
-			source .env
-
-			# capture (possible) changes
-			env > .env-local
-			grep -vxFf .env-global .env-local > .env-changes
-
-			# ok, so if a variable exists in .env-changes and it...
-			# 
-			# 	does NOT exist in .env-global, we should unset it when done
-			# 	DOES exist in .env-global, we should revert to its previous value
-			# 
-
-			# list variables that existed before and were changed
-			cat .env-global  | sed -En 's/^([A-Z][^=]*)=(.*)/^\1/Ip' > .env-global-vars
-
-			# unset those declarations that were added
-			cat .env-changes | grep -vf .env-global-vars | awk -F'=' '{ print "unset "$1 }' > .env-revert
-
-			# filter the previous env to that list
-			cat .env-changes | grep -f .env-global-vars | awk -F'=' '{ print "^"$1 }' > .env-changed-vars
-			cat .env-global  | grep -f .env-changed-vars >> .env-revert
-
-			# clean up
-			rm .env-global .env-local .env-changes .env-global-vars .env-changed-vars
-
-		fi
-
-		# strip PWD (not FULL path, just PWD) from filename, if it was passed
+		# strip PWD (not FULL path, just PWD) from filename, if it was "passed"
 		YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
-		# EXAMINE FRONTMATTER
+		# EXAMINE SCRIPT FRONTMATTER, AND OVERWRITE OR APPEND
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -446,7 +445,7 @@ function testScript() {
 			&& log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
 
 		# define (and export) the test's name, as extracted from the script's frontmatter
-		# or... provided in the environment? environment might not guarantee uniqueness. 
+		# (or... provided in the environment? environment might not guarantee uniqueness.)
 		YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
 		if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
 			YENTESTS_TEST_NAME=$( echo ${PWD/$YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
@@ -455,7 +454,7 @@ function testScript() {
 		# parse out any prerequisites from frontmatter... 
 		AFTERLINE=$( sed -En 's|^[ ]*#[ ]*@after (.*)$|\1|p;/^[ ]*#[ ]*@after /q' ${YENTESTS_TEST_FILE} )
 		if [[ -n ${AFTERLINE} ]] ; then
-			# search through "after"'s, finding if _all_ are in done file... otherwise bail
+			# search through "after"'s, finding if _all_ are in done file... otherwise bail.
 			# from this perspective, it could be better to store the reverse: a "todo" file
 			# with this code exiting if a line exists in that file for a prerequisite
 			IFS=","
@@ -469,7 +468,7 @@ function testScript() {
 			done
 		fi
 
-		# off-cycle or randomly executed? 
+		# is this test to be run off-cycle or randomly executed/ignored? 
 		TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
 		if [[ -n ${TMPLINE} ]] ; then
 			if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
@@ -517,7 +516,9 @@ function testScript() {
 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 		# 
-		# READ OR CONSTRUCT TEST HASH
+		# READ OR CONSTRUCT THE TEST SCRIPT HASH
+		# 
+		# should this ignore frontmatter? 
 		# 
 		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -571,7 +572,7 @@ function testScript() {
 			YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
 		fi
 
-	# no more exports
+	# no more variable exports
 	set +a 
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -609,18 +610,28 @@ function testScript() {
 
 function runTestSuite() {
 
-	# export the suite name as a "global" env var, just the folder name
-	# this will thus be accessible in subroutines here if we want to use 
-	# it to identify/tag, locate, or print anything
-	export YENTESTS_TEST_SUITE_NAME=${1}
-
 	# enter the declared test suite directory
 	cd ${1}
-	
-	# run test.sh file in target folder, if it exists... always first
-	[[ -f test.sh ]] && testScript test.sh
 
-	# if there is a "tests" __subfolder__, run ANY scripts in that
+	# make sure (like really sure) we aren't using an old name
+	unset ${YENTESTS_TEST_SUITE_NAME}
+
+	# export the suite name as a "global" env var. default is just the folder name,
+	# but if there is a .env file, we can define the name with a TEST_SUITE_NAME variable. 
+	# this will thus be accessible in subroutines here if we want to use 
+	# it to identify/tag, locate, or print anything. 
+	[[ -f .env ]]
+		&& YENTESTS_TEST_SUITE_NAME=$( sed  -n 's/^TEST_SUITE_NAME=(.*)/\1/p' .env )
+
+	# that might not have caught anything... 
+	[[ -z ${YENTESTS_TEST_SUITE_NAME} ]] 
+		&& export YENTESTS_TEST_SUITE_NAME=${1}
+	
+	# run test.sh file in target folder, if it exists... ALWAYS DONE FIRST
+	[[ -f test.sh ]] 
+		&& testScript test.sh
+
+	# if there is a "tests" SUBFOLDER, run ANY scripts in that
 	# (run ANY scripts so we don't have to mess with making a "manifest")
 	# any such script should expect to run from the suite directory
 	# 
@@ -628,14 +639,15 @@ function runTestSuite() {
 	# over the tests subfolder, a "done" list, and reading "after"
 	# (and/or "before"?) front matter elements (if any)
 	# 
-	# There can be as many as #files passes, no more. We can maintain 
+	# There can be as many as #files passes, no more. (as in, totally sequential 
+	# runs of each file in the folder: first, second, third, etc). We can maintain 
 	# a done list with "filename,testname" rows and check the list
 	# when checking frontmatter. If there is an "after" element, read
 	# the done list checking for a matching filename or testname. 
 	# 
 	if [[ -d tests ]] ; then 
 
-		# empty "done" and "todo" file(s)
+		# empty "done" and "todo" file(s), making sure they exist
 		> ${YENTESTS_TESTS_DONE_FILE}
 		> ${YENTESTS_TESTS_TODO_FILE}
 		
@@ -658,7 +670,7 @@ function runTestSuite() {
 			[[ $( wc -l < ${YENTESTS_TESTS_TODO_FILE} ) -eq 0 ]] && break
 		done
 
-		# clean up by deleting the todo and done files
+		# clean up by deleting the todo and done files 
 		rm ${YENTESTS_TESTS_TODO_FILE} ${YENTESTS_TESTS_DONE_FILE}
 
 	fi
@@ -672,7 +684,7 @@ function runTestSuite() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
-# EXECUTIONS
+# ACTUAL test.sh EXECUTIONS
 # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # 
@@ -682,6 +694,7 @@ function runTestSuite() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -694,7 +707,7 @@ function runTestSuite() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# tests home folder... use _ first to keep this variable defined
+# tests home folder... how to customize? 
 # export YENTESTS_TEST_HOME=/ifs/yentools/yentests
 export YENTESTS_TEST_HOME=${PWD}
 

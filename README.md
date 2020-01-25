@@ -5,7 +5,7 @@
 
 **The Why:** The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us identify problems on the servers before users do. There are also some basic task executions as tests. 
 
-**Contributing:** The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
+**Contributing Tests:** The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
 
 **How Tests Run:** Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
@@ -39,6 +39,8 @@ Each row of the `csv` results has the following fields, in order:
 
 should you choose to use any of these as result storage options. 
 
+**Contributing to the Infrastructure:** Ok, this is complicated. The infrastructure for running tests is really in one file, `test.sh`, for compactness if not simplicity. Some bleeds over into `.env` and `systemd` service files, but really it is all in `test.sh`. We explain this file in detail later in this readme. The file itself is, we hope, verbosely commented to assist in understanding the meaning of the code. 
+
 # Installing yentests
 
 ## Getting the Code
@@ -53,9 +55,13 @@ If you want to play with the repo outside of the normal location, say in your ho
 
 This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch, not the `master` branch. Reserve the `master` branch for production. 
 
+**TODO:** It would be cool to have pushes to this repo run a pipeline to post the relevant parts of an installable repo to `S3` (or other) for download. Like a CDN. 
+
+**TODO:** It might also be cool to create a simple webform that allowed (secure) entry of various running parameters, converted them to a `.env` file, and them packaged that into a download with the "CDN" version of the code. 
+
 ## Defining the Environment
 
-We use a `.env` file to define key data needed by the actual test script. A template is provided as `.env.template`, because we shouldn't track the `.env` file in the repo. It will have secrets you need to leave out of version control. 
+We use a `.env` file to define key data needed by the actual test script. A template is provided as `.env.template`, because we shouldn't track the `.env` file in the repo. _It will have secrets you need to leave out of version control._ 
 
 Here's a quick list of the variables the running infrastructure will make sense of from `.env`: 
 
@@ -206,53 +212,45 @@ These command line options will override settings in any `.env` file included.
 
 ## What test.sh Does
 
-The main `test.sh` script will search any _subfolder_ of `tests` and run
+More or less, `test.sh` runs scripts placed into subfolders of the `tests` directory. (This location could be generalized.) Each such subfolder is considered a "test suite"; for example, the included `isilon` test suite has a number of tests. 
 
-* `tests/*/test.sh` file, if it exists
-* any file matching `tests/*/tests/*.sh`
+More formally, the main `test.sh` script will search any _subfolder_ of `tests` and run
 
-This way test "suites" can be collected within such folders. If there is a "main" test, that can be defined in `test.sh`. More detailed tests can be defined in any file in `tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests`. 
+* a `tests/*/test.sh` file, if it exists
+* any file matching `tests/*/tests/*.sh`; that is, any script in a `tests` subfolder of the test suite
 
-Of course, `test.sh` has to _literally_ do quite a bit more than this to work correctly. Here are the major components of what the code actually does: 
+This way "test suites" can be collected within such folders. If there is a "main" test, that should be defined in `test.sh`. More detailed tests can be defined in any file in `tests/*/tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests/*/tests`. It really should be that easy. 
+
+Of course, the running infrastructure script `test.sh` has to _literally_ do quite a bit more than this to work correctly. Here are the major components of what the code actually does: 
 
 ### Setup Default Testing Environment
 
-Read `.env` and prepare a "default" environment to be loaded for any test in a file `.defaults`. 
+Read `.env` and prepare a "default" environment to be loaded for _any_ test in a file `.defaults`. 
 
 ### Load Correct Test Environment
 
-Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`. Also, parse the frontmatter of any test script to define or override variables that should be defined for any tests. 
+Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`, should that exist. Also, parse the "frontmatter" of any test script to define or override variables that should be defined for any tests. 
 
 ### Run Monitored Tests
 
-Actually run the scripts and monitor relevant system data about those runs. Right now we just store test duration (execution time), but we should also store total/average CPU utilization and maximum memory usage for each test process (and any of its children).  
+Actually run the included test scripts and monitor relevant system data about those runs. Right now we store test duration (execution time), total/average CPU utilization at test start time, and memory availability/usage _on the whole machine_s at test start time. It would also be good, though more resource intensive, to store CPU utilization and memory statistics for the test processes (and children) themselves. 
 
 ### Collect and Organize Output
 
 Collect output like monitoring data, test exit code, test success/failure, and any error messages from failures. Organize this output into data structures suitable for loading into storage solutions (both local and remote).
 
-### Load Data in Storage
+### Load Data into Storage
 
-Manage getting data into any local "databases" (files, `sqlite`) or remote storage (`S3`, `influxdb`). 
+Manage getting data into any local "databases" (files, `sqlite`) or remote storage (`S3`, `influxdb`). We should also allow syncing to `IFS`, notinng that this too is a "remote" file storage system. 
 
 ---
 
 # Test Output
 
-Each test will output
 
-1. Folder location of the test
-2. Command being tested
-    1. execution status : SUCCESS or FAILURE
-    2. Exit Code
-        1. 0 is command successfully executed
-        2. Non-0 will be an error
-    3. Whether test timed out (0/1)
-    4. Execution time in seconds
-    5. any error messages
-3. Indicator the test record was stored in the database both Sqlite and InfluxDB
 
 ## Logs
+
 
 
 ## Results
@@ -296,7 +294,7 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
 
 # Changing or Contributing Tests
 
-Our intent is that writing tests should be easy. All you should really know how to do is write a script (on top of how to use `git` that is). 
+Our intent is that writing this package is to make contributing or editing tests easy. That is, to "front load" all the complexity into `tests.sh`. All you should be required to know how to do to contribute/edit a test is how to write a script that runs your test. 
 
 ## An Example
 
@@ -306,17 +304,21 @@ Our intent is that writing tests should be easy. All you should really know how 
 
 ## Frontmatter
 
+You can, if you want, use frontmatter to define customizations to how a test script should run. Frontmatter items are included in comments in the test script, with `@_____` like codes. See `tests/matlab/tests/launch.sh` for example. 
+
+Here is a list of the recognized frontmatter codes now: 
+
 ### `@name`
 
-The name to use for the test. For `influxdb`, spaces will be replaced with underscores. 
+The name to use for the test. For `influxdb`, spaces will be replaced with underscores. This overrides the test script file name (sans extension). This is recorded in the logs and result data. 
 
 ### `@version`
 
-A version number for the test. 
+A version number for the test. This is recorded in the result data. 
 
 ### `@description`
 
-A brief description of the test. This is for commenting purposes only; the description does not affect how the tests are actually run. May be parsed for documentation, however. 
+A brief description of the test. This is for commenting purposes only; the description does not affect how the tests are actually run. May be parsed for documentation, however, and is good practice to help others understand the test. 
 
 ### `@authors`
 
@@ -324,22 +326,22 @@ A list of test authors. This is for commenting purposes only; the authors do not
 
 ### `@timeout`
 
-Specify a test-specific timeout (in seconds), or `none` for no timeout. Run tests without a timeout with caution. 
+Specify a test-specific timeout (in seconds), or `none` for no timeout. _Run tests without a timeout with caution, they could interrupt the entire testing system if they hang._
 
 ### `@notimeout`
 
-A shortcut for `@timeout none`. Run tests without a timeout with caution. 
+A shortcut for `@timeout none`. _Run tests without a timeout with caution, they could interrupt the entire testing system if they hang._
 
 ### `@skip`
 
-Specification of when to run tests when _not_ running every time the tests code executes. By specifying a positive integer you specify how many cycles or runs are _skipped_; for example, `@skip 3` means that a particular test will run only every _fourth_ execution of the testing code. Specifying a positive decimal number less than one is interpreted as a probability; for example, `@skip 0.25` means that the test could run in any execution but will, in the long run, run in only 75% of executions. 
+Specification of when to run tests when _not_ running every time `test.sh` executes. By specifying a positive integer you specify how many cycles or runs are _skipped_; for example, `@skip 3` means that a particular test will run only every _fourth_ execution of `test.sh`, as determined by the monotonic run index. Specifying a positive decimal number less than one is interpreted as a probability; for example, `@skip 0.25` means that the test could run in _any_ execution but will, in the long run, run in only 75% of executions. 
 
 ### `@after`
 
-A list of (comma-separated) pre-requisites from the same test suite. 
-
+A list of (comma-separated) pre-requisites from the same test suite. This enables tests to be "staged" as in a Directed Acyclic Graph. For example, you might want a test to be skipped if a certain other test fails; that is, run only if a particular other test succeeded. 
 
 ## Incorporating Your Changes
+
 
 
 ---
@@ -362,5 +364,5 @@ You can contact the DARC team [via email](gsb_darcresearch@stanford.edu).
 
 Authors: 
 
-* Ferdi Evalle 
+* Ferdi Evalle (no longer with Stanford)
 * [W. Ross Morrow](morrowwr@stanford.edu)
