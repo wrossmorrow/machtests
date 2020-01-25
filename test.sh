@@ -281,11 +281,9 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then
-		log "${YENTESTS_TEST_OUTCSV}"
-	else 
-		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
-	fi
+	[[ -n ${YENTESTS_DRY_RUN} ]] \
+		&& log "${YENTESTS_TEST_OUTCSV}"
+		|| echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -623,15 +621,15 @@ function runTestSuite() {
 	# but if there is a .env file, we can define the name with a TEST_SUITE_NAME variable. 
 	# this will thus be accessible in subroutines here if we want to use 
 	# it to identify/tag, locate, or print anything. 
-	[[ -f .env ]]
+	[[ -f .env ]] \
 		&& YENTESTS_TEST_SUITE_NAME=$( sed  -n 's/^TEST_SUITE_NAME=(.*)/\1/p' .env )
 
 	# that might not have caught anything... 
-	[[ -z ${YENTESTS_TEST_SUITE_NAME} ]] 
+	[[ -z ${YENTESTS_TEST_SUITE_NAME} ]] \
 		&& export YENTESTS_TEST_SUITE_NAME=${1}
 	
 	# run test.sh file in target folder, if it exists... ALWAYS DONE FIRST
-	[[ -f test.sh ]] 
+	[[ -f test.sh ]] \
 		&& testScript test.sh
 
 	# if there is a "tests" SUBFOLDER, run ANY scripts in that
@@ -717,7 +715,7 @@ function runTestSuite() {
 
 # tests home folder... how to customize? where do we read this from .env or from CLI? 
 # we could use whatever is inn the CURRENT environment pretty easily... 
-[[ -z ${YENTESTS_TEST_HOME} ]]
+[[ -z ${YENTESTS_TEST_HOME} ]] \
 	&& export YENTESTS_TEST_HOME=${PWD}
 	|| REVERTABLE_YENTESTS_TEST_HOME=${YENTESTS_TEST_HOME}
 
@@ -749,12 +747,12 @@ while getopts "hrdvlsiwDLIWSt:e:R:" OPT ; do
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
-		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;;
-		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;; 	# unsetting these variables will preclude use
+		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;        	# unsetting these variables will preclude use
 		D) YENTESTS_KEEP_DEFAULTS_FILE=1 ;;
-		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;;
-		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;
-		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;
+		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;; 		# unsetting these variables will preclude use
+		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;       		# unsetting these variables will preclude use
+		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;   		# unsetting these variables will preclude use
 		t) [[ -z ${YENTESTS_TEST_EXCL} ]] \
 				&& YENTESTS_TEST_LIST=${OPTARG} \
 				|| echo "WARNING: Already provided a list to exclude, can't also provide a list to include. Ignoring the latter." \
@@ -812,22 +810,37 @@ else
 fi
 export -f log
 
-# construct a usable influxdb URL ("global" env var)
-export YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
-# is this exported in a way not reasonably accomplished with .defaults?
-
 # if S3 options are defined, set them up and check validity
 if [[ -n ${YENTESTS_S3_ACCESS_KEY_ID} \
 		&& -n ${YENTESTS_S3_SECRET_ACCESS_KEY} \
 		&& -n ${YENTESTS_S3_BUCKET} ]] ; then 
+
 	export AWS_ACCESS_KEY_ID=${YENTESTS_S3_ACCESS_KEY_ID}
 	export AWS_SECRET_ACCESS_KEY=${YENTESTS_S3_SECRET_ACCESS_KEY}
-	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX} > /dev/null
+	aws s3 ls s3://${YENTESTS_S3_BUCKET}/${YENTESTS_S3_PREFIX} > /dev/null 2&>1
 	[[ $? -eq 0 ]] && YENTESTS_UPLOAD_TO_S3==1
+
 fi
 
 [[ -n ${YENTESTS_VERBOSE_LOGS} && -n ${YENTESTS_UPLOAD_TO_S3} ]] \
 	&& log "looks like S3 connection is defined and ok"
+
+# if InfluxDB options are defined, set them up and check validity
+if [[ -n ${YENTESTS_INFLUXDB_HOST} \
+		&& -n ${YENTESTS_INFLUXDB_DB} \
+		&& -n ${YENTESTS_INFLUXDB_USER} \
+		&& -n ${YENTESTS_INFLUXDB_PWD} ]] ; then 
+
+	# construct a "usable" influxdb URL ("global" env var)
+	export YENTESTS_INFLUXDB_URL="${YENTESTS_INFLUXDB_HOST}:${YENTESTS_INFLUXDB_PORT}/write?db=${YENTESTS_INFLUXDB_DB}&u=${YENTESTS_INFLUXDB_USER}&p=${YENTESTS_INFLUXDB_PWD}&precision=s"
+	# check this URL for validity...
+	
+	[[ $? -eq 0 ]] && YENTESTS_UPLOAD_TO_INFLUXDB==1
+
+fi
+
+[[ -n ${YENTESTS_VERBOSE_LOGS} && -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] \
+	&& log "looks like InfluxDB connection is defined and ok"
 
 # read TEST_ID from a file here, in the home directory. this will be 
 # a sequential, unique index... convenient because we could compare
@@ -853,7 +866,7 @@ export YENTESTS_TEST_RUNID # again, export vs .defaults?
 # it be "resettable" should we want that
 
 # hashes: if using, at least make sure the directory exists, and is g+rw
-[[ -f ${YENTESTS_HASH_LOG} ]] 
+[[ -f ${YENTESTS_HASH_LOG} ]] \
 	|| makeOpenDirectory ${YENTESTS_HASH_LOG%/*}
 
 # define "todo" file, if not customized
@@ -960,9 +973,9 @@ fi
 # now that tests are done, upload to InfluxDB IF we upload to InfluxDB
 if [[ -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] ; then
 	CURL_STAT=$( curl -k -s -w "%{http_code}" -o ${YENTESTS_TMP_LOG_DIR}/curl.log \
-					-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "${YENTESTS_TMP_LOG_DIR}/influxdbupload.lpf" )
+					-X POST "${YENTESTS_INFLUXDB_URL}" --data-binary "@${YENTESTS_TMP_LOG_DIR}/influxdbupload.lpf" )
 	if [[ ${CURL_STAT} -ne 204 ]] ; then 
-		log "post to influxdb appears to have failed (${CURL_STAT})"
+		log "upload to InfluxDB appears to have failed (${CURL_STAT})"
 		[[ -f ${YENTESTS_TMP_LOG_DIR}/curl.log ]] \
 			&& cat ${YENTESTS_TMP_LOG_DIR}/curl.log
 	else
@@ -973,13 +986,15 @@ if [[ -n ${YENTESTS_UPLOAD_TO_INFLUXDB} ]] ; then
 fi
 
 # don't need .defaults anymore... delete if we don't explicitly say to keep
-[[ -z ${YENTESTS_KEEP_DEFAULTS_FILE} ]] 
+[[ -z ${YENTESTS_KEEP_DEFAULTS_FILE} ]] \
 	&& rm .defaults > /dev/null 2>&1
 
 # don't need the "global" environment variables (YENTESTS_*) anymore, EXCEPT any existing YENTESTS_TEST_HOME?
 # that's a problem, which I hope we correct with a post-cleaning reset
 unsetEnvVarsMatchingPrefix "YENTESTS_"
-[[ -n ${REVERTABLE_YENTESTS_TEST_HOME} ]]
+
+# replace stored YENTESTS_TEST_HOME value, if it exists
+[[ -n ${REVERTABLE_YENTESTS_TEST_HOME} ]] \
 	&& export YENTESTS_TEST_HOME=${REVERTABLE_YENTESTS_TEST_HOME}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 

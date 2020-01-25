@@ -64,7 +64,7 @@ First, clone the repo from Bitbucket, as usual. **Note:** the repo is already cl
 If you want to play with the repo outside of the normal location, say in your home folder, you can do 
 
 ```
-~$ git clone --single-branch --branch development git@bitbucket.org/circleresearch/yentests.git
+~$ git clone --single-branch --branch development git@bitbucket.org:circleresearch/yentests.git
 ```
 
 This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch, not the `master` branch. Reserve the `master` branch for production. 
