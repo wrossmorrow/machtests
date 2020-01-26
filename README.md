@@ -172,7 +172,7 @@ sqlite> .exit
 
 We can install a `cron` job to run the tests each hour (or each half hour, or each 15 minutes etc) on each `yen` server. Care should be taken that _the interval chosen does not produce overlapping test runs_ (on a single machine). That is, if tests take a minute, we should not try to run them every 30 seconds. 
 
-If using `sqlite3` with a database on the `IFS` system, these scheduled tests will need to run on a staggered schedule to prevent collisions in accessing the `sqlite` database. However, this problem is alleviated should we use a machine-specific `sqlite3`database. 
+If using `sqlite3` with a database on the `IFS` system, these scheduled tests will need to run on a staggered schedule to prevent collisions in accessing the `sqlite` database. However, this problem is alleviated should we use a machine-specific `sqlite3`database. In fact, we should store locally anyway: if `IFS` is unavailable, a database on `IFS` is not useful. This obviates the need to consider database write collisions. 
 
 For example, tests on `yen1` starts at 0 minute mark of each hour, and have the `crontab` entry: 
 
