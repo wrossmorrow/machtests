@@ -67,7 +67,6 @@ function unsetEnvVarsMatchingPrefix() {
 
 # make an "open"(-ish) directory
 function makeOpenDirectory() {
-	echo "opening ${1}"
 	mkdir -p ${1} && chmod g+rwx ${1}
 }
 
