@@ -24,7 +24,7 @@ testCommand "ls -la /tmp"
 storeTestRecord "$software" "$input_cmd" "$exit_code" "$cmd_output" "$time_real"
 ```
 
-In the setup enabled here, in this package, this is the same script: 
+In the setup enabled here, in this package, this script accomplished the same goal: 
 
 ```
 #!/bin/bash
