@@ -332,7 +332,16 @@ memory available at test start,
 processes running at test start, 
 processes defined at test start
 ```
-(as listed above). These are stored at `${YENTESTS_TEST_RESULTS}.csv`. 
+(as listed above). These are stored at `${YENTESTS_TEST_RESULTS}.csv`. Here is some example data: 
+
+```
+2020-01-26T10:57:28.258128718,2071,launch julia,P,false,0,0.41,,23.26,21.55,21.05,126485960,1458784276,27,1772
+2020-01-26T10:57:29.204669796,2071,ml julia,P,false,0,0.07,,23.26,21.55,21.05,126357140,1458913096,13,1772
+2020-01-26T10:57:29.820703297,2071,Local Server Folder,F,true,143,5,,23.26,21.55,21.05,125962220,1459308016,13,1772
+2020-01-26T10:57:35.403218324,2071,ml mathematica,P,false,0,0.07,,22.43,21.40,21.01,126334428,1458935808,13,1772
+2020-01-26T10:57:36.110070604,2071,run mathematica,P,false,0,1.50,,22.43,21.40,21.01,126269308,1459000928,13,1772
+2020-01-26T10:57:38.324330797,2071,launch matlab,P,false,0,16.82,,21.68,21.26,20.97,127029012,1458241224,13,1772
+```
 
 **TODO:** figure out a rotation scheme for these files, so that they don't grow indefinitely. Compress "old" result files. 
 
