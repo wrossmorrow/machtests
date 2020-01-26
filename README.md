@@ -221,6 +221,28 @@ TBD
 
 A primary goal of this package is to "frontload" running complexity to make it as easy as possible to create and include new tests. This frontloading is embodied in `test.sh`, a script that indeed has a fair bit of complexity. This is all (hopefully) addressed below. 
 
+## Motivation
+
+For a bit of motivation on this point, let's look at a simple `ls /tmp` test to evaluate (trivial) access to the local filesystem. In the original tests, this was the script to do this: 
+
+```
+#!/bin/bash 
+script_home=$( dirname $(realpath 0$) )
+source $script_home/../env.sh
+software="Local Server Folder"
+testCommand "ls -la /tmp"
+storeTestRecord "$software" "$input_cmd" "$exit_code" "$cmd_output" "$time_real"
+```
+
+In the setup enabled here, in this package, this is the same script: 
+
+```
+#!/bin/bash
+ls -al /tmp
+```
+
+This illustrates our goal: to run a test, all you have to know is how to run the test. 
+
 ## Running By Hand
 
 You can run the `yentests` by hand by running the `test.sh` script in the `/ifs/yentools/yentests` folder: 
