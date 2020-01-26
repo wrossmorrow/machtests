@@ -131,7 +131,10 @@ function exitTestScript() {
 
 	# modify "todo" file by deleting matching line for this test
 	if [[ -f ${YENTESTS_TESTS_TODO_FILE} ]] ; then 
-		sed -Ei.bak "/${TMP_FILE_NAME}|${YENTESTS_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
+		# annoying commands here to escape backslashes that might appear in the names? 
+		TMP_FILE_NAME=$( echo ${TMP_FILE_NAME} | sed 's;/;\\/;g' )
+		TMP_TEST_NAME=$( echo ${YENTESTS_TEST_NAME} | sed 's;/;\\/;g' )
+		sed -Ei.bak "/${TMP_FILE_NAME}|${TMP_TEST_NAME}/d" ${YENTESTS_TESTS_TODO_FILE}
 		rm ${YENTESTS_TESTS_TODO_FILE}.bak
 	fi
 

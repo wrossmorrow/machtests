@@ -3,15 +3,25 @@
 
 ## Purpose 
 
-Run easily maintanable and extensible collections of test scripts on the `yen` servers, ideally to identify problems on the servers before users do. 
+Run easily maintanable and extensible collections of test scripts on the `yen` servers. 
 
 ## Why
 
-The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us identify problems on the servers before users do. There are also some basic task executions as tests. 
+The broad purpose of these tests is to _proactively_ assess the availability of software packages, software package setups (`module load`), local server and network file systems, on the Stanford GSB's "`yen`" research computing servers. By proactive we mainly intend for these tests to help us _identify problems on the servers before users do_. 
 
 ## Contributing Tests
 
 The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
+
+While you only _have_ to know how to script your test to contribute a test, you can do alot here to control how your test runs with "frontmatter". This is described in more detail below. But, in brief, frontmatter will let you: 
+
+* customize the name of your test
+* provide a version number for your test
+* provide a description of the test
+* list the test's authors
+* set, change, or eliminate the timeout used for the test
+* run the test only in certain test cycles, or with a specified probability
+* specify prerequisites from the same test suite, making executions follow a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) pattern
 
 ## How Tests Run
 
@@ -24,28 +34,28 @@ Test results are always stored locally, on physical disk, in `csv` form. Locally
 Each row of the `csv` results has the following fields, in order: 
 
 ```
-    datetime of test run,
-    test runid (for a given run of test.sh),
-    test name,
-    status (i.e., pass/fail),
-    timedout?,
-    test script exit code,
-    duration of test script run,
-    error from test script run, if any,
-    machine's  5m cpu usage at test start,
-    machine's 10m cpu usage at test start,
-    machine's 15m cpu usage at test start,
-    memory used at test start,
-    memory available at test start,
-    processes running at test start, 
-    processes defined at test start
+datetime of test run,
+test runid (for a given run of test.sh),
+test name,
+status (i.e., pass/fail),
+timedout?,
+test script exit code,
+duration of test script run,
+error from test script run, if any,
+machine's  5m cpu usage at test start,
+machine's 10m cpu usage at test start,
+machine's 15m cpu usage at test start,
+memory used at test start,
+memory available at test start,
+processes running at test start, 
+processes defined at test start
 ```
 
 ## Dependencies
 
 The tests and their running infrastructure should be lightweight. We require only `bash` and, optionally, 
 
-* `sqlite3` software and starter database
+* `sqlite3` software (with a starter database)
 * An AWS account, `S3` bucket and write credentials
 * A machine/instance/cluster running `influxdb` and write credentials
 
@@ -57,9 +67,15 @@ Ok, this is complicated. The infrastructure for running tests is really in one f
 
 # Installing yentests
 
+## The "Production" Install
+
+Right now, the `yentests` are installed at `/ifs/yentools/yentests`. This is a temporarily functional but ultimately terrible place for them to be installed. Part of the desired test suite tests the _very availability and functionality_ of `IFS`, and thus the test suites _cannot themselves be installed in_ `IFS`. 
+
+The "right" place to install them would be locally on any given machine, such as in `/etc/yentests` on every `yen`. Then the `yentests` can run, store, and report data regardless of the availability or functionality of `IFS`. Moreover, the tests can report on that availability and/or functionality. 
+
 ## Getting the Code
 
-First, clone the repo from Bitbucket, as usual. **Note:** the repo is already cloned and tracked on `IFS` at `/ifs/yentools/yentests`. 
+Should you want the code, clone the repo from Bitbucket, as usual. **Note:** the repo is already cloned and tracked on `IFS` at `/ifs/yentools/yentests`. 
 
 If you want to play with the repo outside of the normal location, say in your home folder, you can do 
 
@@ -67,9 +83,9 @@ If you want to play with the repo outside of the normal location, say in your ho
 ~$ git clone --single-branch --branch development git@bitbucket.org:circleresearch/yentests.git
 ```
 
-This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch, not the `master` branch. Reserve the `master` branch for production. 
+This will, of course, create and populate a folder `~/yentests`. Note we clone the `development` branch, not the `master` branch. We should reserve the `master` branch for production. 
 
-**TODO:** It would be cool to have pushes to this repo run a pipeline to post the relevant parts of an installable repo to `S3` (or other) for download. Like a CDN. 
+**TODO:** It would be cool to have pushes to this repo run a pipeline to post the relevant parts of an installable repo to `S3` (or other) for easier download. Like a CDN. 
 
 **TODO:** It might also be cool to create a simple webform that allowed (secure) entry of various running parameters, converted them to a `.env` file, and them packaged that into a download with the "CDN" version of the code. 
 
@@ -102,7 +118,13 @@ YENTESTS_INFLUXDB_PWD=
 
 See the comments in `.env.template` for more information, including definitions and defaults (if any). 
 
-## Creating the sqlite3 database
+**TODO:** It could be useful to have a script that helps create this `.env` file based on command line inputs from the user. 
+
+## Creating The sqlite3 Database
+
+**NOTE:** this is old documentation from the original versions of the tests. 
+
+**TODO:** Make this a scripted component of running `test.sh`, as are the checks on InfluxDB or `S3` uploads. 
 
 Create the `sqlite` database and tables using a script
 ```
@@ -146,13 +168,13 @@ CREATE TABLE test_results (
 sqlite> .exit
 ```
 
-## Installing yentests as a cron Job
+## Installing `yentests` as a `cron` Job
 
-Setup a `cron` job to run the tests each hour on each `yen` server.  Setup a different run schedule to prevent overlap with the same job on a different server to prevent tests accessing the `sqlite` database simultaneously which will cause an access error because `sqlite` is single threaded.
+We can install a `cron` job to run the tests each hour (or each half hour, or each 15 minutes etc) on each `yen` server. Care should be taken that _the interval chosen does not produce overlapping test runs_ (on a single machine). That is, if tests take a minute, we should not try to run them every 30 seconds. 
 
-Set the enviroment in the `crontab` below. 
+If using `sqlite3` with a database on the `IFS` system, these scheduled tests will need to run on a staggered schedule to prevent collisions in accessing the `sqlite` database. However, this problem is alleviated should we use a machine-specific `sqlite3`database. 
 
-For example, tests on `yen1` starts at 0 minute mark of each hour
+For example, tests on `yen1` starts at 0 minute mark of each hour, and have the `crontab` entry: 
 
 ```
 $ crontab -e
@@ -174,17 +196,30 @@ PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
 
 `yen3` is setup to run at 30 min and `yen4` at 45 min.
 
+We also have to set the enviroment correctly for a `cron` job to run. This is accomplished by having `cron` run the simple wrapper script `/ifs/yentools/yentests/test.sh`: 
+
+```
+#!/bin/bash
+cd /ifs/yentools/yentests/development
+# this export needed to support cron job
+export PATH="${PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin:/ifs/yentools/bin"
+bash test.sh
+```
+
+Note the append of `/ifs/yentools/bin` to the `PATH` which would exist for a user, _but does not exist for a_ `cron` _job_. We should run the tests with an environment as close as possible to that of a real user. 
+
+
 ## Installing yentests as a Scheduled systemd Unit
 
 We can use `systemd` timers to run the `yentests` on a schedule. Prototypes are provided in the `service` folder. 
 
-
+TBD
 
 --- 
 
 # Test Infrastructure
 
-
+A primary goal of this package is to "frontload" running complexity to make it as easy as possible to create and include new tests. This frontloading is embodied in `test.sh`, a script that indeed has a fair bit of complexity. This is all (hopefully) addressed below. 
 
 ## Running By Hand
 
@@ -194,9 +229,7 @@ You can run the `yentests` by hand by running the `test.sh` script in the `/ifs/
 $ cd /ifs/yentools/yentests && ./test.sh
 ```
 
-You should be able to run this without a `.env` file, if you can accept all the defaults. 
-
-You can pass some options to the script to control its behavior: 
+You should be able to run this without a `.env` file, if you can accept all the defaults. Naturally, you can also pass some options to the script to control its behavior. Here's most of what the help will print: 
 
 ``` 
   Command line option flags: 
@@ -226,28 +259,36 @@ These command line options will override settings in any `.env` file included.
 
 ## What test.sh Does
 
-More or less, `test.sh` runs scripts placed into subfolders of the `tests` directory. (This location could be generalized.) Each such subfolder is considered a "test suite"; for example, the included `isilon` test suite has a number of tests. 
+More or less, `test.sh` runs scripts placed into subfolders of the `tests` directory. (This location could, of course, be generalized with a `.env` variable or command line argument.) Each such subfolder is considered a "test suite"; for example, the `tests/isilon` test suite has a number of tests. 
 
 More formally, the main `test.sh` script will search any _subfolder_ of `tests` and run
 
 * a `tests/*/test.sh` file, if it exists
-* any file matching `tests/*/tests/*.sh`; that is, any script in a `tests` subfolder of the test suite
+* any file matching `tests/*/tests/*.sh`; that is, any script in a `tests` subfolder of the test suite itself
 
-This way "test suites" can be collected within such folders. If there is a "main" test, that should be defined in `test.sh`. More detailed tests can be defined in any file in `tests/*/tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests/*/tests`. It really should be that easy. 
+This way "test suites" can be collected within such folders. If there is a "main" test, that should be defined in `tests/*/test.sh`. More detailed tests can be defined in any file in `tests/*/tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests/*/tests`. It really should be that easy. 
 
-Of course, the running infrastructure script `test.sh` has to _literally_ do quite a bit more than this to work correctly. Here are the major components of what the code actually does: 
+Moreover, some tests have dependencies. Take `tests/mathematica` for example. This test suite has a script to run, `tests/mathematica/test.m` (note: _not_ `.sh`). If you look into `tests/mathematica/tests/runscript.sh`, you'll see a reference to this script. This is the pattern we adopt for dependencies: place them in the test suite folder (like `tests/mathematica`), so long as they aren't named `test.sh`. All test scripts, even if in `tests/*/tests`, will run as if from `tests/*` and thus these dependencies should be available. 
+
+Of course, the running infrastructure script `test.sh` has to _literally_ do quite a bit to work correctly. Here are the major components of what the code actually does: 
+
+### Defines Utility Functions
+
+There is a large section at the top of the file where utility functions and other routines are defined. The comments in the code should explain what they do. (And if they don't, you're welcome to fix them!)
 
 ### Setup Default Testing Environment
 
-Read `.env` and prepare a "default" environment to be loaded for _any_ test in a file `.defaults`. 
+Read `.env` and prepare a "default" environment to be loaded for _any_ test, and store that (1) in the "global" environment, for values constant over all tests, using `export` and (2) in a file `.defaults` for values that might be overridden in particular tests or test suites. 
 
 ### Load Correct Test Environment
 
-Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`, should that exist. Also, parse the "frontmatter" of any test script to define or override variables that should be defined for any tests. 
+Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`, should that exist at runtime. Also, parse the "frontmatter" of any particular test script to define or override variables that are expected or appropriate for particular tests. 
 
 ### Run Monitored Tests
 
-Actually run the included test scripts and monitor relevant system data about those runs. Right now we store test duration (execution time), total/average CPU utilization at test start time, and memory availability/usage _on the whole machine_s at test start time. It would also be good, though more resource intensive, to store CPU utilization and memory statistics for the test processes (and children) themselves. 
+Actually run the included test scripts and monitor relevant system data about those runs. Right now we store test duration (execution time), total/average CPU utilization at test start time, and memory availability/usage _on the whole machine_ at test start time. It would also be good, though more resource intensive, to store CPU utilization and memory statistics for the test processes (and children) themselves. Perhaps this can be an overridable option. 
+
+**TODO:** Write a function in `test.sh` to collect, at a higher frequency than the test run, CPU and memory statistics for a running test script and all its children. Incorporate these data into the result outputs and uploads. 
 
 ### Collect and Organize Output
 
@@ -255,43 +296,67 @@ Collect output like monitoring data, test exit code, test success/failure, and a
 
 ### Load Data into Storage
 
-Manage getting data into any local "databases" (files, `sqlite`) or remote storage (`S3`, `influxdb`). We should also allow syncing to `IFS`, notinng that this too is a "remote" file storage system. 
+Manage getting data into any local "databases" (files, `sqlite`) or remote storage (`S3`, `influxdb`). We should also allow syncing to `IFS`, noting that this too is a "remote" file storage system. 
+
+**TODO:** Write options and code to replicate result data to `IFS` if the connection is live. 
 
 ---
 
 # Test Output
 
-
+INTRO TBD
 
 ## Logs
 
-
+TBD
 
 ## Results
 
 A daily results file in `csv` format is created, whose columns are
 ```
-datetime , run id , test name , S/F , exit code , timeout? , duration , cpu (TBD) , mem (TBD)
+datetime of test run,
+test runid (for a given run of test.sh),
+test name,
+status (i.e., pass/fail),
+timedout?,
+test script exit code,
+duration of test script run,
+error from test script run, if any,
+machine's  5m cpu usage at test start,
+machine's 10m cpu usage at test start,
+machine's 15m cpu usage at test start,
+memory used at test start,
+memory available at test start,
+processes running at test start, 
+processes defined at test start
 ```
+(as listed above). These are stored at `${YENTESTS_TEST_RESULTS}.csv`. 
 
-## sqlite
+## sqlite3
 
-
+TBD
 
 ## AWS S3
 
-If credentials and settings are provided, upload the `csv` data to `S3`. 
+If AWS credentials and settings are provided for `S3`, upload the `csv` data to `S3`. 
 
-DOCS TBD. 
+Here are the variables that have to be defined to use `S3`: 
+```
+YENTESTS_S3_ACCESS_KEY_ID=
+YENTESTS_S3_SECRET_ACCESS_KEY=
+YENTESTS_S3_BUCKET=
+YENTESTS_S3_PREFIX=
+``` 
+The connection defined will be tested before attempting any writes. 
 
-Writes to `S3` are done in batch fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay data's upload to `S3`. 
+Writes to `S3` are done in "batch" fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay the upload to `S3`. 
 
 ## InfluxDB
 
 Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.gsbdarc.com`. But you could change the host with a setting in `.env`. Specifically we write following: 
 
 * Database: `yentests`
-* Mesurement: `yentests`
+* Measurement: `yentests`
 * Tags: 
     * `test`: name of the test script
     * `hash`: `SHA256` hash of the test script
@@ -308,33 +373,69 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
     * `rprocs`, `nprocs`: the number of running and total processes when the test started
 *  `time`: the _start_ time of the test, at second precision
 
-Like `S3` uploads, writes to InfluxDB are done in batch fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay data's ingestion in InfluxDB. 
+Here are the variables that have to be defined to use InfluxDB: 
+```
+YENTESTS_INFLUXDB_HOST=
+YENTESTS_INFLUXDB_PORT=
+YENTESTS_INFLUXDB_DB=
+YENTESTS_INFLUXDB_USER=
+YENTESTS_INFLUXDB_PWD=
+```
+The connection defined will be tested before attempting any writes. 
+
+Like `S3` uploads, writes to InfluxDB are done in "batch" fashion after all tests run. If a test hangs (absent a timeout), or if a test takes a long time (absent a timeout stopping it), that will delay ingestion into InfluxDB. 
 
 ---
 
 # Changing or Contributing Tests
 
-Our intent is that writing this package is to make contributing or editing tests easy. That is, to "front load" all the complexity into `tests.sh`. All you should be required to know how to do to contribute/edit a test is how to write a script that runs your test. 
+Our primary intent is that writing this package (as opposed to its predecessor, or other approaches) is to make contributing or editing tests as easy as possible. That is, to "frontload" all the complexity into `tests.sh` which, ideally, test contributors can ignore. All you should be _required_ to know how to do to contribute/edit a test is how to write a script that runs your test. We address the added feature of test script frontmatter below; frontmatter will allow contributors to control test script execution without having to understand or manipulate `test.sh`. 
 
-## An Example
+## An Example, with Placement
 
+This is an example of how a test could be added. 
 
-## Placement
+Suppose we want to time how long it takes `matlab` to solve a random linear system, as a partial gauge of system performance. How would we do that? 
 
+Well, we would want to create a new file, say `tests/matlab/tests/solve.sh`. Note the new file would go in the `tests` folder, under the `tests/matlab` test suite, as one of its executables in `tests/matlab/tests`. We could also include a dependency `tests/matlab/solve_rand_Axeb.m`, with the code
+```
+function [] = solve_rand_Axeb( N )
+    x = rand( N , N ) \ rand( N , 1 )
+end 
+```
+Note the dependency goes in `tests/matlab`, not `tests/matlab/tests`. We would then edit `tests/matlab/tests/solve.sh` to be, say,  
+
+```
+#!/bin/bash
+matlab -r "solve_rand_Axeb(1000); exit"
+```
+
+_And that's it._ This inversion test should run on the next invocation of `test.sh`, and the test duration (minus `matlab` load time, which another test estimates) would estimate for us the inversion time (ignoring random matrix generation time, which is likely small compared to inversion time). To check this, we could just execute `./test.sh -v` from the repo's root directory. 
+
+I did this (removing these files afterward), and observed the results to contain a new line for this new test:
+```
+2020-01-26T10:57:38.324330797,2071,launch matlab,P,false,0,16.82,,21.68,21.26,20.97,127029012,1458241224,13,1772
+2020-01-26T10:57:55.698130870,2071,ml matlab,P,false,0,0.06,,19.67,20.84,20.83,127448860,1457821376,13,1774
+2020-01-26T10:57:56.329430146,2071,tests/matlab/tests/solve.sh,P,false,0,16.75,,19.67,20.84,20.83,127006220,1458264016,13,1774
+```
+
+Note the "full" path script name listed as the test name. That's the default, used because we didn't include a `@name` frontmatter tag like we do in the other `matlab` tests. 
+
+**EXERCISE:** Replicate this example, verifying it has worked using the logs or the results. Then extend the example to include a `@name`, and check again. 
 
 ## Frontmatter
 
 You can, if you want, use frontmatter to define customizations to how a test script should run. Frontmatter items are included in comments in the test script, with `@_____` like codes. See `tests/matlab/tests/launch.sh` for example. 
 
-Here is a list of the recognized frontmatter codes now: 
+Here is a list of the recognized frontmatter codes: 
 
 ### `@name`
 
-The name to use for the test. For `influxdb`, spaces will be replaced with underscores. This overrides the test script file name (sans extension). This is recorded in the logs and result data. 
+The name to use for the test. For InfluxDB, spaces will be replaced with underscores. This overrides the test script file name (sans extension). This is recorded in the logs and result data. 
 
 ### `@version`
 
-A version number for the test. This is recorded in the result data. 
+A version number for the test. This is recorded in the result data. Note: a hash of the test script is also included in the test results, so that all test script change events (but not particular changes at the `diff` level) are "tracked" regardless of the version number. 
 
 ### `@description`
 
@@ -354,15 +455,15 @@ A shortcut for `@timeout none`. _Run tests without a timeout with caution, they 
 
 ### `@skip`
 
-Specification of when to run tests when _not_ running every time `test.sh` executes. By specifying a positive integer you specify how many cycles or runs are _skipped_; for example, `@skip 3` means that a particular test will run only every _fourth_ execution of `test.sh`, as determined by the monotonic run index. Specifying a positive decimal number less than one is interpreted as a probability; for example, `@skip 0.25` means that the test could run in _any_ execution but will, in the long run, run in only 75% of executions. 
+Specification of when to run tests when _not_ running every time `test.sh` executes. By specifying a positive integer you specify how many cycles or runs are _skipped_; for example, `@skip 3` means that a particular test will run only every _fourth_ execution of `test.sh`, as determined by the monotonic run index. Specifying a positive decimal number less than one is interpreted as a probability. For example, `@skip 0.25` means that the test _could_ run in _any_ execution but will be skipped in any given run with 25% probability; that is, in the long run, the test will run in only 75% of executions. 
 
 ### `@after`
 
-A list of (comma-separated) pre-requisites from the same test suite. This enables tests to be "staged" as in a Directed Acyclic Graph. For example, you might want a test to be skipped if a certain other test fails; that is, run only if a particular other test succeeded. 
+A list of (comma-separated) pre-requisites _from the same test suite_. This enables tests to be "staged" as in a Directed Acyclic Graph. For example, you might want a test to be skipped if a certain other test fails; that is, run only if a particular other test succeeded. pre-requisites should be specified by the test name. 
 
-## Incorporating Your Changes
+## Incorporating Your Changes into Production
 
-
+PROCESS TBD
 
 ---
 
@@ -370,13 +471,27 @@ A list of (comma-separated) pre-requisites from the same test suite. This enable
 
 ## Dashboard
 
-A Chronograph dashboard called [Yen Test](http://monitor.gsbrss.com:8888/sources/1/dashboards/9?lower=now%28%29%20-%2012h) monitors the tests on each server. Any results displayed in the graph are errors and should be investigated.
+A Chronograph dashboard called [Yen Test](http://monitor.gsbrss.com:8888/sources/1/dashboards/9?lower=now%28%29%20-%2012h) monitors the tests on each server. Any results displayed in the graph are errors and should be investigated. Obviously this requires uploading data to InfluxDB. 
 
 ## Alerts
 
-We use `kapacitor` for alerting. 
+Alerts should be triggered when certain adverse conditions are met; particular adverse conditions of note are described below. 
 
+Local alerting could be managed with a companion `cron` job or `systemd` timer running a script on each `yen`, or with an addition to the postprocessing functionality in `test.sh`. Such a companion service/code would need to scan the results and send emails or post Slack messages when adverse conditions arise. 
 
+We prefer using `kapacitor` for alerting. Obviously this requires uploading data to InfluxDB. This manages alerting through [tick scripts]. Similar functionality could be achieved in `S3` using [Lambda functions](https://aws.amazon.com/lambda/). Such a function would watch the result bucket for new uploads, parse those uploads, and then send alerts upon identification of adverse conditions. 
+
+Remote alerting is perhaps preferable to local alerting because (1) it takes workload off of the `yen` servers, which are actively used for research, and (2) can analyze conditions _across_ the `yen`s, not just on _any single_ `yen`. While we are not currently exploiting that, we might in the future. Say, perhaps we want to issue an alert should _all_ the `yen`s be running slowly, but not if any single one is. 
+
+Note that remote alerting could also mean using `IFS`. A companion service (not, I think, an addition to `test.sh`) would need to scan results _replicated to_ `IFS` and send emails or post Slack messages when adverse conditions arise. 
+
+### Adverse Conditions
+
+Here is a list of the adverse conditions we (should) monitor: 
+
+TBD
+
+---
 
 # Contact
 
