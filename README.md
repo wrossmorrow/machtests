@@ -174,7 +174,7 @@ We can install a `cron` job to run the tests each hour (or each half hour, or ea
 
 If using `sqlite3` with a database on the `IFS` system, these scheduled tests will need to run on a staggered schedule to prevent collisions in accessing the `sqlite` database. However, this problem is alleviated should we use a machine-specific `sqlite3`database. In fact, we should store locally anyway: if `IFS` is unavailable, a database on `IFS` is not useful. This obviates the need to consider database write collisions. 
 
-For example, tests on `yen1` starts at 0 minute mark of each hour, and have the `crontab` entry: 
+We can, and do, keep a staggered schedule for other reasons though. A staggered schedule means that perhaps we get a better portrait of usage across the `yen`s over a given period, and also maybe means that we aren't imposing on all research computing activity at the same time when running the tests. As of now, tests on `yen1` starts at 0 minute mark of each hour, and have the `crontab` entry: 
 
 ```
 $ crontab -e
@@ -184,7 +184,7 @@ PATH=/home/users/<user>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
 0 */1 * * * /ifs/yentools/yentests/test.sh
 ```
 
-For example, tests on `yen2` starts at the 15 minute mark of each hour
+Tests on `yen2` starts at the 15 minute mark of each hour
 
 ```
 $ crontab -e
