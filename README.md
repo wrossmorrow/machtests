@@ -280,15 +280,17 @@ There is a large section at the top of the file where utility functions and othe
 
 Read `.env` and prepare a "default" environment to be loaded for _any_ test, and store that (1) in the "global" environment, for values constant over all tests, using `export` and (2) in a file `.defaults` for values that might be overridden in particular tests or test suites. 
 
-### Load Correct Test Environment
+### Load Correct Test-Specific Environment
 
 Load variables defined in `.defaults` _and_ any test-suite-specific variables in `tests/*/.env`, should that exist at runtime. Also, parse the "frontmatter" of any particular test script to define or override variables that are expected or appropriate for particular tests. 
 
 ### Run Monitored Tests
 
-Actually run the included test scripts and monitor relevant system data about those runs. Right now we store test duration (execution time), total/average CPU utilization at test start time, and memory availability/usage _on the whole machine_ at test start time. It would also be good, though more resource intensive, to store CPU utilization and memory statistics for the test processes (and children) themselves. Perhaps this can be an overridable option. 
+Actually run the included test scripts and monitor relevant system data about those runs. Right now we store test duration (execution time), total/average CPU utilization at test start time, and memory availability/usage _on the whole machine_ at test start time. 
 
-**TODO:** Write a function in `test.sh` to collect, at a higher frequency than the test run, CPU and memory statistics for a running test script and all its children. Incorporate these data into the result outputs and uploads. 
+It would also be good, though more resource intensive, to store CPU utilization and memory statistics for the test processes (and children) themselves. Perhaps this can be an overridable option. Moreover, this shouldn't be done for very fast tests. It would probably only make sense to collect such data for tests that take many seconds or minutes, not sub-second tests. 
+
+**TODO:** Write a function in `test.sh` to collect, at a higher frequency than the test run, and only for "long running tests", CPU and memory statistics for the actual execution of a test script and all its children. Incorporate these data into the result outputs and uploads. 
 
 ### Collect and Organize Output
 
@@ -312,7 +314,7 @@ TBD
 
 ## Results
 
-A daily results file in `csv` format is created, whose columns are
+A machine-specific results file in `csv` format is created, whose columns are
 ```
 datetime of test run,
 test runid (for a given run of test.sh),
@@ -331,6 +333,8 @@ processes running at test start,
 processes defined at test start
 ```
 (as listed above). These are stored at `${YENTESTS_TEST_RESULTS}.csv`. 
+
+**TODO:** figure out a rotation scheme for these files, so that they don't grow indefinitely. Compress "old" result files. 
 
 ## sqlite3
 
