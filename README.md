@@ -13,6 +13,26 @@ The broad purpose of these tests is to _proactively_ assess the availability of 
 
 The testing system is designed so that _you don't need to know how the tests are actually run_ to write or edit a test. You just need to know what you want to test, and how package that in a `bash` script, and maybe edit some "front matter" to control test execution if you want. Our hope is that this makes contribution, maintenance, and debugging of the tests themselves easy, by abstracting away running infrastructure into a single script. 
 
+For a bit of motivation on this point, let's look at a simple `ls /tmp` test to evaluate (a trivial) access to the local filesystem. In the original set of `yentests`, this was the script to do this: 
+
+```
+#!/bin/bash 
+script_home=$( dirname $(realpath 0$) )
+source $script_home/../env.sh
+software="Local Server Folder"
+testCommand "ls -la /tmp"
+storeTestRecord "$software" "$input_cmd" "$exit_code" "$cmd_output" "$time_real"
+```
+
+In the setup enabled here, in this package, this is the same script: 
+
+```
+#!/bin/bash
+ls -al /tmp
+```
+
+This illustrates our goal: _to write a test, all you have to know is how to run the test_. 
+
 While you only _have_ to know how to script your test to contribute a test, you can do alot here to control how your test runs with "frontmatter". This is described in more detail below. But, in brief, frontmatter will let you: 
 
 * customize the name of your test
@@ -22,6 +42,15 @@ While you only _have_ to know how to script your test to contribute a test, you 
 * set, change, or eliminate the timeout used for the test
 * run the test only in certain test cycles, or with a specified probability
 * specify prerequisites from the same test suite, making executions follow a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) pattern
+
+For example, say we want the name "Local Server Folder" to be applied to the test the above. To wit: 
+
+```
+#!/bin/bash
+# @name Local Server Folder
+ls -al /tmp
+```
+
 
 ## How Tests Run
 
@@ -221,28 +250,6 @@ TBD
 
 A primary goal of this package is to "frontload" running complexity to make it as easy as possible to create and include new tests. This frontloading is embodied in `test.sh`, a script that indeed has a fair bit of complexity. This is all (hopefully) addressed below. 
 
-## Motivation
-
-For a bit of motivation on this point, let's look at a simple `ls /tmp` test to evaluate (trivial) access to the local filesystem. In the original tests, this was the script to do this: 
-
-```
-#!/bin/bash 
-script_home=$( dirname $(realpath 0$) )
-source $script_home/../env.sh
-software="Local Server Folder"
-testCommand "ls -la /tmp"
-storeTestRecord "$software" "$input_cmd" "$exit_code" "$cmd_output" "$time_real"
-```
-
-In the setup enabled here, in this package, this is the same script: 
-
-```
-#!/bin/bash
-ls -al /tmp
-```
-
-This illustrates our goal: to run a test, all you have to know is how to run the test. 
-
 ## Running By Hand
 
 You can run the `yentests` by hand by running the `test.sh` script in the `/ifs/yentools/yentests` folder: 
@@ -369,13 +376,20 @@ processes defined at test start
 
 ## sqlite3
 
-TBD
+Here are the environment variables that have to be defined to use `sqlite3`: 
+
+```
+YENTESTS_SQLITE_DB=
+YENTESTS_SQLITE_FILE=
+```
+
+The existence of the db, file, and tables will be tested before attempting any writes. Ideally, these will be created if they don't exist. 
 
 ## AWS S3
 
 If AWS credentials and settings are provided for `S3`, upload the `csv` data to `S3`. 
 
-Here are the variables that have to be defined to use `S3`: 
+Here are the environment variables that have to be defined to use `S3`: 
 ```
 YENTESTS_S3_ACCESS_KEY_ID=
 YENTESTS_S3_SECRET_ACCESS_KEY=
@@ -408,7 +422,9 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
     * `rprocs`, `nprocs`: the number of running and total processes when the test started
 *  `time`: the _start_ time of the test, at second precision
 
-Here are the variables that have to be defined to use InfluxDB: 
+We distinguish these categories -- Measurement, Tags, Fields, aqnd time -- as they are relevant to InfluxDB. Measurements are a bit like tables, tags are parts of the data that are automatically indexed, fields are non-indexed data, and time is always a distinct entity in a time series database like InfluxDB. Data that are indexed are efficiently searchable, and we can use `group by` like operations on them. Fields are more like data that we want to plot or aggregate. 
+
+Here are the environment variables that have to be defined to use InfluxDB: 
 ```
 YENTESTS_INFLUXDB_HOST=
 YENTESTS_INFLUXDB_PORT=
