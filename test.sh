@@ -163,7 +163,7 @@ function exitTestScript() {
 function _testCommand() {
 
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-		&& log "testing command \"${@}\""
+		&& log "testing command \"$@\""
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -788,11 +788,11 @@ if [[ -z ${YENTESTS_RUN_LOG} ]] ; then
 	# create log function
 	if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
 		function log() {
-			echo "$( date +"%FT%T.%N" ):${PWD}: $1"
+			echo "$( date +"%FT%T.%N" ):${PWD}: $@"
 		}
 	else 
 		function log() {
-			echo "$( date +"%FT%T.%N" ): $1"
+			echo "$( date +"%FT%T.%N" ): $@"
 		}
 	fi
 
@@ -804,11 +804,11 @@ else
 	# create log function
 	if [[ -n ${YENTESTS_VERBOSE_LOGS} ]] ; then 
 		function log() {
-			echo "$( date +"%FT%T.%N" ):${PWD}: $1" >> ${YENTESTS_RUN_LOG}
+			echo "$( date +"%FT%T.%N" ):${PWD}: $@" >> ${YENTESTS_RUN_LOG}
 		}
 	else 
 		function log() {
-			echo "$( date +"%FT%T.%N" ): $1" >> ${YENTESTS_RUN_LOG}
+			echo "$( date +"%FT%T.%N" ): $@" >> ${YENTESTS_RUN_LOG}
 		}
 	fi
 
