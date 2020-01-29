@@ -51,8 +51,11 @@ For example, say we want the name "Local Server Folder" to be applied to the tes
 ls -al /tmp
 ```
 
+## Drafting Your Tests
 
-## How Tests Run
+One important frontmatter tag is `@draft`. If `test.sh` is run with the flag `-p`, it will run only those scripts _without_ such a tag (and the scheduled jobs include `-p`). We recommend including this in your frontmatter until you are _sure_ that you want the test you're writing to be including in the scheduled, production runs. You can run only the scripts with `@draft` in their frontmatter by passing the `-P` flag to `test.sh`. 
+
+## Running Scheduled Tests "in Production"
 
 Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are always stored locally, and can additionally be logged to `sqlite`, `S3`, and `influxdb` (whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
@@ -232,11 +235,10 @@ We also have to set the enviroment correctly for a `cron` job to run. This is ac
 cd /ifs/yentools/yentests/development
 # this export needed to support cron job
 export PATH="${PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin:/ifs/yentools/bin"
-bash test.sh
+bash test.sh -p
 ```
 
-Note the append of `/ifs/yentools/bin` to the `PATH` which would exist for a user, _but does not exist for a_ `cron` _job_. We should run the tests with an environment as close as possible to that of a real user. 
-
+Note the append of `/ifs/yentools/bin` to the `PATH` which would exist for a user, _but does not exist for a_ `cron` _job_. We should run the tests with an environment as close as possible to that of a real user. Note also the flag `-p`, which specifies that only "production" test scripts lacking a `@draft` frontmatter tag should be run. 
 
 ## Installing yentests as a Scheduled systemd Unit
 
@@ -266,11 +268,13 @@ You should be able to run this without a `.env` file, if you can accept all the 
     h - print this message and exit. 
     r - reset locally-stored, monotonic run index. use with caution. 
     d - do a dry-run; that is, don't actually run any tests themselves
+    p - run only \"production\" tests, those WITHOUT a \"@draft\" frontmatter tag
     v - print verbose logs for the tester
-    l - store local results only
+    l - store local results only (ignore all remote uploads)
     s - store ONLY sqlite3 results (if configured)
     i - store ONLY influxdb results (if configured)
     w - store ONLY S3 results (if configured)
+    P - opposite of -p, run \"@draft\" tests only
     D - keep .defaults file, so that it can be reviewed outside of a particular run
     E - write out a .env-tests file for the run, so it can be reviewed
     L - do NOT store local results (delete after completion)
@@ -462,6 +466,7 @@ Note the dependency goes in `tests/matlab`, not `tests/matlab/tests`. We would t
 
 ```
 #!/bin/bash
+# @draft
 matlab -r "solve_rand_Axeb(1000); exit"
 ```
 
@@ -474,7 +479,7 @@ I did this (removing these files afterward), and observed the results to contain
 2020-01-26T10:57:56.329430146,2071,tests/matlab/tests/solve.sh,P,false,0,16.75,,19.67,20.84,20.83,127006220,1458264016,13,1774
 ```
 
-Note the "full" path script name listed as the test name. That's the default, used because we didn't include a `@name` frontmatter tag like we do in the other `matlab` tests. 
+Note the "full" path script name listed as the test name. That's the default, used because we didn't include a `@name` frontmatter tag like we do in the other `matlab` tests. Note though that we _do_ include `@draft`, as recommended. 
 
 **EXERCISE:** Replicate this example, verifying it has worked using the logs or the results. Then extend the example to include a `@name`, and check again. 
 
