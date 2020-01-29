@@ -387,6 +387,8 @@ YENTESTS_SQLITE_FILE=
 
 The existence of the db, file, and tables will be tested before attempting any writes. Ideally, these will be created if they don't exist. 
 
+**TODO:** This. Adapt `sqlite3` stuff to new tests. 
+
 ## AWS S3
 
 If AWS credentials and settings are provided for `S3`, upload the `csv` data to `S3`. 
@@ -424,7 +426,7 @@ Data from the `yens` is shipped to our `influxdb` monitoring instance, `monitor.
     * `rprocs`, `nprocs`: the number of running and total processes when the test started
 *  `time`: the _start_ time of the test, at second precision
 
-We distinguish these categories -- Measurement, Tags, Fields, aqnd time -- as they are relevant to InfluxDB. Measurements are a bit like tables, tags are parts of the data that are automatically indexed, fields are non-indexed data, and time is always a distinct entity in a time series database like InfluxDB. Data that are indexed are efficiently searchable, and we can use `group by` like operations on them. Fields are more like data that we want to plot or aggregate. 
+We distinguish these categories -- Measurement, Tags, Fields, and time -- as they are relevant to InfluxDB. Measurements are a bit like tables, tags are parts of the data that are automatically indexed, fields are non-indexed data, and time is always a distinct entity in a time series database like InfluxDB. Data that are indexed are efficiently searchable, and we can use `group by` like operations on them. Fields are more like data that we want to plot or aggregate. 
 
 Here are the environment variables that have to be defined to use InfluxDB: 
 ```
@@ -446,7 +448,7 @@ Our primary intent is that writing this package (as opposed to its predecessor, 
 
 ## An Example, with Placement
 
-This is an example of how a test could be added. 
+This is an example of how a test could be written and placed in a location suitable for automated execution. 
 
 Suppose we want to time how long it takes `matlab` to solve a random linear system, as a partial gauge of system performance. How would we do that? 
 
@@ -497,6 +499,10 @@ A brief description of the test. This is for commenting purposes only; the descr
 ### `@authors`
 
 A list of test authors. This is for commenting purposes only; the authors do not affect how the tests are actually run. May be parsed for documentation, however. 
+
+### `@draft`
+
+A flag to denote that this test script is a "draft". Drafts tests can be left out of any execution with the `-p` flag, or _only_draft_ tests can be included in a test run with the `-P` flag. s
 
 ### `@timeout`
 

@@ -14,11 +14,13 @@ ARGUMENTS
     h - print this message and exit. 
     r - reset locally-stored, monotonic run index. use with caution. 
     d - do a dry-run; that is, don't actually run any tests themselves
+    p - run only \"production\" tests, those WITHOUT a \"@draft\" frontmatter tag
     v - print verbose logs for the tester
-    l - store local results only
+    l - store local results only (ignore all remote uploads)
     s - store ONLY sqlite3 results (if configured)
     i - store ONLY influxdb results (if configured)
     w - store ONLY S3 results (if configured)
+    P - opposite of -p, run \"@draft\" tests only
     D - keep .defaults file, so that it can be reviewed outside of a particular run
     E - write out a .env-tests file for the run, so it can be reviewed
     L - do NOT store local results (delete after completion)
@@ -163,6 +165,20 @@ function exitTestScript() {
 # this is the "real" command testing function. 
 function _testCommand() {
 
+	# if we're not passed arguments, just return. nothing to do. 
+	[[ $# -eq 0 ]] && return
+
+	# don't run draft tests, if we're only interested in production tests
+	[[ -n ${YENTESTS_RUN_PRODUCTION_ONLY} ]] \
+		&& [[ ${YENTESTS_TEST_IS_PRODUCTION} -ne 1 ]] \
+			&& return
+
+	# run ONLY draft tests, if we're only interested in testing tests
+	[[ -n ${YENTESTS_RUN_DRAFTS_ONLY} ]] \
+		&& [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
+			&& return
+
+	# verbose logs tests start print
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
 		&& log "testing command \"$@\""
 
@@ -428,158 +444,163 @@ function testScript() {
 	# start exporting all variable definitions included below, including source statements
 	set -a
 
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-			&& log "loading environment..."
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		&& log "loading environment..."
 
-		# load DEFAULT variables (for all tests) AND any environment variables specific to this test suite
-		# also, though, store which variables the local .env file adds or alters, so we can take 
-		# them away later to revert to a "clean" environment
-		[[ -f ${YENTESTS_TEST_HOME}/.defaults ]] \
-			&& source ${YENTESTS_TEST_HOME}/.defaults \
-			|| log "WARNING: .defaults file (${YENTESTS_TEST_HOME}/.defaults) does not appear to exist."
+	# load DEFAULT variables (for all tests) AND any environment variables specific to this test suite
+	# also, though, store which variables the local .env file adds or alters, so we can take 
+	# them away later to revert to a "clean" environment
+	[[ -f ${YENTESTS_TEST_HOME}/.defaults ]] \
+		&& source ${YENTESTS_TEST_HOME}/.defaults \
+		|| log "WARNING: .defaults file (${YENTESTS_TEST_HOME}/.defaults) does not appear to exist."
 
-		# load environment variables stored for a test suite, carefully
-		[[ -f .env ]] && createRevertableEnvironment 
+	# load environment variables stored for a test suite, carefully
+	[[ -f .env ]] && createRevertableEnvironment 
 
-		# strip PWD (not FULL path, just PWD) from filename, if it was "passed"
-		YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
+	# strip PWD (not FULL path, just PWD) from filename, if it was "passed"
+	YENTESTS_TEST_FILE=$( echo ${1/$PWD/} | sed -E 's|^/+||' )
 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-		# 
-		# EXAMINE SCRIPT FRONTMATTER, AND OVERWRITE OR APPEND
-		# 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# 
+	# EXAMINE SCRIPT FRONTMATTER, AND OVERWRITE OR APPEND
+	# 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-			&& log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		&& log "parsing frontmatter in ${YENTESTS_TEST_FILE}..."
 
-		# define (and export) the test's name, as extracted from the script's frontmatter
-		# (or... provided in the environment? environment might not guarantee uniqueness.)
-		YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
-		if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
-			YENTESTS_TEST_NAME=$( echo ${PWD/$YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
-		fi
+	# define (and export) the test's name, as extracted from the script's frontmatter
+	# (or... provided in the environment? environment might not guarantee uniqueness.)
+	YENTESTS_TEST_NAME=$( sed -En 's|^[ ]*#[ ]*@name (.*)|\1|p;/^[ ]*#[ ]*@name /q' ${YENTESTS_TEST_FILE} )
+	if [[ -z ${YENTESTS_TEST_NAME} ]] ; then 
+		YENTESTS_TEST_NAME=$( echo ${PWD/$YENTESTS_TEST_HOME/} | sed -E 's|^/+||' )/${1}
+	fi
 
-		# parse out any prerequisites from frontmatter... 
-		AFTERLINE=$( sed -En 's|^[ ]*#[ ]*@after (.*)$|\1|p;/^[ ]*#[ ]*@after /q' ${YENTESTS_TEST_FILE} )
-		if [[ -n ${AFTERLINE} ]] ; then
-			# search through "after"'s, finding if _all_ are in done file... otherwise bail.
-			# from this perspective, it could be better to store the reverse: a "todo" file
-			# with this code exiting if a line exists in that file for a prerequisite
-			IFS=","
-			for P in ${AFTERLINE} ; do
-				if [[ -n $( grep ${P} ${YENTESTS_TESTS_TODO_FILE} ) ]] ; then
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-						&& log "deferring \"${YENTESTS_TEST_NAME}\":: prerequisite \"${P}\" not completed"
-					deferTestScript
-					return
-				fi
-			done
-		fi
+	# parse out any prerequisites from frontmatter... 
+	AFTERLINE=$( sed -En 's|^[ ]*#[ ]*@after (.*)$|\1|p;/^[ ]*#[ ]*@after /q' ${YENTESTS_TEST_FILE} )
+	if [[ -n ${AFTERLINE} ]] ; then
+		# search through "after"'s, finding if _all_ are in done file... otherwise bail.
+		# from this perspective, it could be better to store the reverse: a "todo" file
+		# with this code exiting if a line exists in that file for a prerequisite
+		IFS=","
+		for P in ${AFTERLINE} ; do
+			if [[ -n $( grep ${P} ${YENTESTS_TESTS_TODO_FILE} ) ]] ; then
+				[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					&& log "deferring \"${YENTESTS_TEST_NAME}\":: prerequisite \"${P}\" not completed"
+				deferTestScript
+				return
+			fi
+		done
+	fi
 
-		# is this test to be run off-cycle or randomly executed/ignored? 
-		TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
-		if [[ -n ${TMPLINE} ]] ; then
-			if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
-				TMPLINE=$( python -c "from random import random; print( random() <= ${TMPLINE} )" )
-				if [[ ${TMPLINE} =~ True ]] ; then 
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-						&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
-					YENTESTS_TEST_STATUS='S'
-					exitTestScript
-					return
-				fi 
+	# is this test to be run off-cycle or randomly executed/ignored? 
+	TMPLINE=$( sed -En 's,^[ ]*#[ ]*@skip ([0-9]+|[0]*\.[0-9]+)[ ]*$,\1,p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+	if [[ -n ${TMPLINE} ]] ; then
+		if [[ ${TMPLINE} =~ 0*.[0-9]+ ]] ; then 
+			TMPLINE=$( python -c "from random import random; print( random() <= ${TMPLINE} )" )
+			if [[ ${TMPLINE} =~ True ]] ; then 
+				[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on probability"
+				YENTESTS_TEST_STATUS='S'
+				exitTestScript
+				return
+			fi 
+		else 
+			# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
+			if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
+				[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
+				YENTESTS_TEST_STATUS='S'
+				exitTestScript
+				return
 			else 
-				# set skip = 3, means run once in every four runs. or RUNID % (skip+1) == 0
-				if [[ $(( ${YENTESTS_TEST_RUNID} % $(( ${TMPLINE} + 1 )) )) -ne 0 ]] ; then
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-						&& log "Skipping \"${YENTESTS_TEST_NAME}\" based on cycle, defined by YENTESTS_TEST_RUNID."
-					YENTESTS_TEST_STATUS='S'
-					exitTestScript
-					return
-				else 
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-						&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by YENTESTS_TEST_RUNID."
-				fi
-			fi
-		else 
-			TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\0|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
-			[[ -n ${TMPLINE} ]] && [[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-				&& log "@skip provided in frontmatter but seems to be malformed..."
-		fi
-
-		# define test version (with a default)
-		YENTESTS_TEST_VERSION=$( sed -En 's|^[ ]*#[ ]*@version ([0-9]+)(.*)|\1|p;/^[ ]*#[ ]*@version /q' ${YENTESTS_TEST_FILE} )
-		[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
-
-		# unset the timeout if "notimeout" declared in the test script frontmatter
-		# if "notimeout" declared, ignore any specified timeout
-		if [[ -n $( sed -En "s|^[ ]*#[ ]*@notimeout|\0|p;/^[ ]*#[ ]*@notimeout/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
-			unset YENTESTS_DEFAULT_TEST_TIMEOUT
-		else 
-			# if timeout given in script frontmatter (in seconds), replace timeout
-			if [[ -n $( sed -En "s|^[ ]*#[ ]*@timeout [0-9]+|\0|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
-				YENTESTS_DEFAULT_TEST_TIMEOUT=$( sed -En "s|^[ ]*#[ ]*@timeout ([0-9]+)|\1|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} )
+				[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+					&& log "Running \"${YENTESTS_TEST_NAME}\" based on skip/cycle, defined by YENTESTS_TEST_RUNID."
 			fi
 		fi
+	else 
+		TMPLINE=$( sed -En 's|^[ ]*#[ ]*@skip |\0|p;/^[ ]*#[ ]*@skip /q' ${YENTESTS_TEST_FILE} )
+		[[ -n ${TMPLINE} ]] && [[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+			&& log "@skip provided in frontmatter but seems to be malformed..."
+	fi
 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-		# 
-		# READ OR CONSTRUCT THE TEST SCRIPT HASH
-		# 
-		# should this ignore frontmatter? 
-		# 
-		# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# define test version (with a default)
+	YENTESTS_TEST_VERSION=$( sed -En 's|^[ ]*#[ ]*@version ([0-9]+)(.*)|\1|p;/^[ ]*#[ ]*@version /q' ${YENTESTS_TEST_FILE} )
+	[[ -z ${YENTESTS_TEST_VERSION} ]] && YENTESTS_TEST_VERSION=0
 
-		[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-			&& log "reading/creating test script hash..."
+	# unset the timeout if "notimeout" declared in the test script frontmatter
+	# if "notimeout" declared, ignore any specified timeout
+	if [[ -n $( sed -En "s|^[ ]*#[ ]*@notimeout|\0|p;/^[ ]*#[ ]*@notimeout/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
+		unset YENTESTS_DEFAULT_TEST_TIMEOUT
+	else 
+		# if timeout given in script frontmatter (in seconds), replace timeout
+		if [[ -n $( sed -En "s|^[ ]*#[ ]*@timeout [0-9]+|\0|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} ) ]] ; then 
+			YENTESTS_DEFAULT_TEST_TIMEOUT=$( sed -En "s|^[ ]*#[ ]*@timeout ([0-9]+)|\1|p;/^[ ]*#[ ]*@timeout [0-9]+/q" ${YENTESTS_TEST_FILE} )
+		fi
+	fi
 
-		# if we have a hash log file to store hashes in, use that
-		if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
+	# is this a "production" test? assert some value to not carry over previous values
+	[[ -z $( sed -En "|^[ ]*#[ ]*@draft|p;" ${YENTESTS_TEST_FILE} ) ]] \
+		&& YENTESTS_TEST_IS_PRODUCTION=1 \ 
+		|| YENTESTS_TEST_IS_PRODUCTION=0
 
-			if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+	# 
+	# READ OR CONSTRUCT THE TEST SCRIPT HASH
+	# 
+	# should this ignore frontmatter? 
+	# 
+	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-				# find the hash of this test-version to use as a test id across runs, or create/update it
-				YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
-				if [[ -z ${YENTESTS_TEST_HASH_LINE} ]] ; then 
+	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+		&& log "reading/creating test script hash..."
 
-					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-						&& log "no current hash line in hash log file..."
+	# if we have a hash log file to store hashes in, use that
+	if [[ -n ${YENTESTS_HASH_LOG} ]] ; then 
 
-					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-					echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${YENTESTS_HASH_LOG}
+		if [[ -f ${YENTESTS_HASH_LOG} ]] ; then  # hash file exists; search it first
 
-				else 
-
-					YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|p" )
-					if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "changing hash log file line..."
-						YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-						sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
-					else 
-						[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "using existing hash log file line..."
-						YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
-					fi
-
-				fi
-
-			else  # create a hash log file here
+			# find the hash of this test-version to use as a test id across runs, or create/update it
+			YENTESTS_TEST_HASH_LINE=$( grep "^${PWD}/${YENTESTS_TEST_FILE}" ${YENTESTS_HASH_LOG} )
+			if [[ -z ${YENTESTS_TEST_HASH_LINE} ]] ; then 
 
 				[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-					&& log "creating hash log file..."
+					&& log "no current hash line in hash log file..."
 
 				YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-				echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${YENTESTS_HASH_LOG}
+				echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" >> ${YENTESTS_HASH_LOG}
 
-				# make sure we open permissions to this file to the group
-				# (NOTE: this will likely be unecessary if derived from proper permission of the directory)
-				chmod g+x ${YENTESTS_HASH_LOG}
+			else 
 
-			fi 
+				YENTESTS_TEST_HASH_VERSION=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -En "s|^${PWD}/${YENTESTS_TEST_FILE},([^,]+),.*|\1|p" )
+				if [[ ${YENTESTS_TEST_HASH_VERSION} -ne ${YENTESTS_TEST_VERSION} ]] ; then
+					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "changing hash log file line..."
+					YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
+					sed -i.bak "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}|" ${YENTESTS_HASH_LOG}
+				else 
+					[[ -n ${YENTESTS_VERBOSE_LOGS} ]] && log "using existing hash log file line..."
+					YENTESTS_TEST_HASH=$( echo ${YENTESTS_TEST_HASH_LINE} | sed -E "s|^${PWD}/${YENTESTS_TEST_FILE},[^,]+,(.*)|\1|" )
+				fi
 
-		else # no known hash file to log this value in, so just do the naive thing and create the hash every time
+			fi
+
+		else  # create a hash log file here
+
+			[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
+				&& log "creating hash log file..."
+
 			YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
-		fi
+			echo "${PWD}/${YENTESTS_TEST_FILE},${YENTESTS_TEST_VERSION},${YENTESTS_TEST_HASH}" > ${YENTESTS_HASH_LOG}
+
+			# make sure we open permissions to this file to the group
+			# (NOTE: this will likely be unecessary if derived from proper permission of the directory)
+			chmod g+x ${YENTESTS_HASH_LOG}
+
+		fi 
+
+	else # no known hash file to log this value in, so just do the naive thing and create the hash every time
+		YENTESTS_TEST_HASH=$( sha256sum ${YENTESTS_TEST_FILE} | awk '{ print $1 }' )
+	fi
 
 	# no more variable exports
 	set +a 
@@ -749,14 +770,22 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_DEFAULT_TEST_TIMEOUT} ]] && YENTESTS_DEFAULT_TEST_TIMEOUT=60
 
 # parse test.sh command line options AFTER reading .env, to effect overrides
-while getopts "hrdvlsiwDELIWSt:e:R:" OPT ; do
+while getopts "hrdpvlsiwPDELIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
+		p) [[ -z ${YENTESTS_RUN_DRAFTS_ONLY} ]] \
+				&& export YENTESTS_RUN_PRODUCTION_ONLY=1 ;; # this needs to be exported for use in test script executions
+				|| echo "WARNING: declared drafts-only run already; production-only only would conflict." \
+				;; 
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;; 	# unsetting these variables will preclude use
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;        	# unsetting these variables will preclude use
+		P) [[ -z ${YENTESTS_RUN_PRODUCTION_ONLY} ]] \
+				&& export YENTESTS_RUN_DRAFTS_ONLY=1 ;; # this needs to be exported for use in test script executions
+				|| echo "WARNING: declared production-only run already; drafts-only only would conflict." \
+				;; 
 		D) YENTESTS_KEEP_DEFAULTS_FILE=1 ;;
 		E) YENTESTS_CREATE_ENV_FILE=1 ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;; 		# unsetting these variables will preclude use
