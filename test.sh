@@ -383,8 +383,8 @@ function _testCommand() {
 
 		# post data to the yentests database in InfluxDB
 		[[ -z ${YENTESTS_DRY_RUN} ]] && [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
-			|| echo "${TMP_INFLUXDB_DATA}" >> ${YENTESTS_TMP_LOG_DIR}/influxupload.lpf \
-			&& log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
+			&& echo "${TMP_INFLUXDB_DATA}" >> ${YENTESTS_TMP_LOG_DIR}/influxupload.lpf \
+			|| log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
 
 	fi
 
