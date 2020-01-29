@@ -540,7 +540,7 @@ function testScript() {
 	fi
 
 	# is this a "production" test? assert some value to not carry over previous values
-	[[ -z $( sed -En "|^[ ]*#[ ]*@draft|p;" ${YENTESTS_TEST_FILE} ) ]] \
+	[[ -z $( sed -En "/^[ ]*#[ ]*@draft/p;" ${YENTESTS_TEST_FILE} ) ]] \
 		&& YENTESTS_TEST_IS_PRODUCTION=1 \
 		|| YENTESTS_TEST_IS_PRODUCTION=0
 
