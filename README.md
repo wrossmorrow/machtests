@@ -54,7 +54,7 @@ ls -al /tmp
 
 ## How Tests Run
 
-Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are logged to `sqlite`, `S3`, and `influxdb` (or whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
+Whatever tests are defined are run regularly in a `cron` job on each server. (A `systemd` timer would be better, and is included.) Test results are always stored locally, and can additionally be logged to `sqlite`, `S3`, and `influxdb` (whichever are defined). Alerts can operate on top of either `S3` (using AWS Lambda) or over `influxdb` using `kapacitor`; we use `kapacitor`. 
 
 ## Test Results
 
@@ -271,6 +271,8 @@ You should be able to run this without a `.env` file, if you can accept all the 
     s - store ONLY sqlite3 results (if configured)
     i - store ONLY influxdb results (if configured)
     w - store ONLY S3 results (if configured)
+    D - keep .defaults file, so that it can be reviewed outside of a particular run
+    E - write out a .env-tests file for the run, so it can be reviewed
     L - do NOT store local results (delete after completion)
     S - do NOT store results in sqlite3 (even if configured)
     I - do NOT store results in influxdb (even if configured)
@@ -295,7 +297,7 @@ More formally, the main `test.sh` script will search any _subfolder_ of `tests` 
 * a `tests/*/test.sh` file, if it exists
 * any file matching `tests/*/tests/*.sh`; that is, any script in a `tests` subfolder of the test suite itself
 
-This way "test suites" can be collected within such folders. If there is a "main" test, that should be defined in `tests/*/test.sh`. More detailed tests can be defined in any file in `tests/*/tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests/*/tests`. It really should be that easy. 
+This way "test suites" can be collected within such folders. If there is a "main" test, that should be defined in `tests/*/test.sh` which will _always_ run _first_. More detailed tests can be defined in any file in `tests/*/tests` whose name ends with `.sh`. Adding a test then amounts to adding a file `newtest.sh` (or whatever) to `tests/*/tests`. It really should be that easy. 
 
 Moreover, some tests have dependencies. Take `tests/mathematica` for example. This test suite has a script to run, `tests/mathematica/test.m` (note: _not_ `.sh`). If you look into `tests/mathematica/tests/runscript.sh`, you'll see a reference to this script. This is the pattern we adopt for dependencies: place them in the test suite folder (like `tests/mathematica`), so long as they aren't named `test.sh`. All test scripts, even if in `tests/*/tests`, will run as if from `tests/*` and thus these dependencies should be available. 
 

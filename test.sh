@@ -14,12 +14,13 @@ ARGUMENTS
     h - print this message and exit. 
     r - reset locally-stored, monotonic run index. use with caution. 
     d - do a dry-run; that is, don't actually run any tests themselves
-    D - KEEP defaults file, so that it can be reviewed outside of a particular call
     v - print verbose logs for the tester
     l - store local results only
     s - store ONLY sqlite3 results (if configured)
     i - store ONLY influxdb results (if configured)
     w - store ONLY S3 results (if configured)
+    D - keep .defaults file, so that it can be reviewed outside of a particular run
+    E - write out a .env-tests file for the run, so it can be reviewed
     L - do NOT store local results (delete after completion)
     S - do NOT store results in sqlite3 (even if configured)
     I - do NOT store results in influxdb (even if configured)
@@ -757,6 +758,7 @@ while getopts "hrdvlsiwDLIWSt:e:R:" OPT ; do
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;; 	# unsetting these variables will preclude use
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;        	# unsetting these variables will preclude use
 		D) YENTESTS_KEEP_DEFAULTS_FILE=1 ;;
+		E) YENTESTS_CREATE_ENV_FILE=1 ;;
 		I) unsetEnvVarsMatchingPrefix "YENTESTS_INFLUXDB" ;; 		# unsetting these variables will preclude use
 		W) unsetEnvVarsMatchingPrefix "YENTESTS_S3" ;;       		# unsetting these variables will preclude use
 		S) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;   		# unsetting these variables will preclude use
@@ -914,6 +916,9 @@ fi
 # store relevant env vars for use in test suites... we will clean and reload this on each run
 # quotes here make sure we can abstract away bash shell special character issues (like with $ or &)
 env | grep '^YENTESTS_DEFAULT' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
+
+[[ -n ${YENTESTS_CREATE_ENV_FILE} ]] \
+	env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .env-tests
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
