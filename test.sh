@@ -303,11 +303,9 @@ function _testCommand() {
 	# 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-	if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-		log "${YENTESTS_TEST_OUTCSV}"
-	else 
-		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
-	fi
+	[[ -n ${YENTESTS_DRY_RUN} ]] || [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 0 ]] \
+		&& log "${YENTESTS_TEST_OUTCSV}" \
+		|| echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TEST_RESULTS}
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -326,11 +324,11 @@ function _testCommand() {
 	# how to handle this efficiently? write every-single-result to S3, or combine into a host-test-batch? 
 	# I think host-tests batch
 	
-	if [[ -n ${YENTESTS_UPLOAD_TO_S3} ]] ; then 
-		echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv 
-	fi
+	[[ -n ${YENTESTS_UPLOAD_TO_S3} ]] \
+		&& [[ -z ${YENTESTS_DRY_RUN} ]] && [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
+			&& echo "${YENTESTS_TEST_OUTCSV}" >> ${YENTESTS_TMP_LOG_DIR}/s3upload.csv
 
-	# when ALL tests are finished, we'll use the AWS CLI to upload... NOT after EACH test runs
+	# when ALL tests are finished, we'll use the AWS CLI to upload... NOT after EACH test run
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
@@ -384,11 +382,9 @@ function _testCommand() {
 		TMP_INFLUXDB_DATA="${YENTESTS_INFLUXDB_DB},${TMP_INFLUXDB_TAGS} ${TMP_INFLUXDB_FIELDS} ${YENTESTS_TEST_START_S}"
 
 		# post data to the yentests database in InfluxDB
-		if [[ -n ${YENTESTS_DRY_RUN} ]] ; then 
-			log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
-		else 
-			echo "${TMP_INFLUXDB_DATA}" >> ${YENTESTS_TMP_LOG_DIR}/influxupload.lpf
-		fi
+		[[ -z ${YENTESTS_DRY_RUN} ]] && [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
+			|| echo "${TMP_INFLUXDB_DATA}" >> ${YENTESTS_TMP_LOG_DIR}/influxupload.lpf \
+			&& log "INFLUXDB:: to ${YENTESTS_INFLUXDB_URL} : ${TMP_INFLUXDB_DATA}"
 
 	fi
 
