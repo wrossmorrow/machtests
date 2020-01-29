@@ -4,4 +4,4 @@
 # @draft
 # 
 
-echo "hi, I'm a fake draft test"
+echo "hi, I'm a fake draft test."

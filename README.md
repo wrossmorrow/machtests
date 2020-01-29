@@ -507,7 +507,7 @@ A list of test authors. This is for commenting purposes only; the authors do not
 
 ### `@draft`
 
-A flag to denote that this test script is a "draft". Drafts tests can be left out of any execution with the `-p` flag, or _only_draft_ tests can be included in a test run with the `-P` flag. s
+A flag to denote that this test script is a "draft". Drafts tests can be left out of any execution with the `-p` flag, or _only_draft_ tests can be included in a test run with the `-P` flag. _Draft tests will have results printed to the logs only_, not written to `CSV` on disk, `IFS`, `sqlite3`, `S3`, or InfluxDB. 
 
 ### `@timeout`
 
