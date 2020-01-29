@@ -24,14 +24,14 @@ testCommand "ls -la /tmp"
 storeTestRecord "$software" "$input_cmd" "$exit_code" "$cmd_output" "$time_real"
 ```
 
-In the setup enabled here, in this package, this script accomplished the same goal: 
+In the setup enabled here, in this package, this script accomplishes the same goal: 
 
 ```
 #!/bin/bash
 ls -al /tmp
 ```
 
-This illustrates our goal: _to write a test, all you have to know is how to run the test_. 
+This illustrates our goal: _to contribute a test, all you have to know is how to write the test_. 
 
 While you only _have_ to know how to script your test to contribute a test, you can do alot here to control how your test runs with "frontmatter". This is described in more detail below. But, in brief, frontmatter will let you: 
 
