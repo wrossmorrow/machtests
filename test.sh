@@ -918,7 +918,7 @@ fi
 env | grep '^YENTESTS_DEFAULT' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 
 [[ -n ${YENTESTS_CREATE_ENV_FILE} ]] \
-	env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .env-tests
+	&& env | grep '^YENTESTS_' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .env-tests
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
