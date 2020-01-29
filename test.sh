@@ -749,7 +749,7 @@ source /etc/profile.d/lmod.sh
 [[ -z ${YENTESTS_DEFAULT_TEST_TIMEOUT} ]] && YENTESTS_DEFAULT_TEST_TIMEOUT=60
 
 # parse test.sh command line options AFTER reading .env, to effect overrides
-while getopts "hrdvlsiwDLIWSt:e:R:" OPT ; do
+while getopts "hrdvlsiwDELIWSt:e:R:" OPT ; do
 	case "${OPT}" in
 		h) echo "${YENTESTS_HELP_STRING}" && exit 0 ;;
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
