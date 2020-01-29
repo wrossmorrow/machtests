@@ -776,14 +776,14 @@ while getopts "hrdpvlsiwPDELIWSt:e:R:" OPT ; do
 		r) echo "" > ${YENTESTS_TEST_RIDF} ;;
 		d) YENTESTS_DRY_RUN=1 ;;
 		p) [[ -z ${YENTESTS_RUN_DRAFTS_ONLY} ]] \
-				&& export YENTESTS_RUN_PRODUCTION_ONLY=1 ;; # this needs to be exported for use in test script executions
+				&& export YENTESTS_RUN_PRODUCTION_ONLY=1 \
 				|| echo "WARNING: declared drafts-only run already; production-only only would conflict." \
 				;; 
 		v) YENTESTS_VERBOSE_LOGS=1 ;;
 		l) unsetEnvVarsMatchingPrefix "YENTESTS_(S3|INFLUXDB)" ;; 	# unsetting these variables will preclude use
 		w) unsetEnvVarsMatchingPrefix "YENTESTS_SQLITE" ;;        	# unsetting these variables will preclude use
 		P) [[ -z ${YENTESTS_RUN_PRODUCTION_ONLY} ]] \
-				&& export YENTESTS_RUN_DRAFTS_ONLY=1 ;; # this needs to be exported for use in test script executions
+				&& export YENTESTS_RUN_DRAFTS_ONLY=1 \
 				|| echo "WARNING: declared production-only run already; drafts-only only would conflict." \
 				;; 
 		D) YENTESTS_KEEP_DEFAULTS_FILE=1 ;;
