@@ -182,7 +182,9 @@ function _testCommand() {
 
 	# verbose logs tests start print
 	[[ -n ${YENTESTS_VERBOSE_LOGS} ]] \
-		&& log "testing command \"$@\""
+		&& [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
+			&& log "testing command \"$@\"" \
+			|| log "testing ** DRAFT ** command \"$@\"" \
 
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	# 
