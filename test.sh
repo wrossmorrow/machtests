@@ -433,7 +433,8 @@ function testScript() {
 		# load DEFAULT variables (for all tests) AND any environment variables specific to this test suite
 		# also, though, store which variables the local .env file adds or alters, so we can take 
 		# them away later to revert to a "clean" environment
-		source ${YENTESTS_TEST_HOME}/.defaults
+		[[ -f ${YENTESTS_TEST_HOME}/.defaults ]] \
+			&& source ${YENTESTS_TEST_HOME}/.defaults
 
 		# load environment variables stored for a test suite, carefully
 		[[ -f .env ]] && createRevertableEnvironment 
