@@ -435,6 +435,7 @@ function testScript() {
 		# them away later to revert to a "clean" environment
 		[[ -f ${YENTESTS_TEST_HOME}/.defaults ]] \
 			&& source ${YENTESTS_TEST_HOME}/.defaults
+			|| log "WARNING: .defaults file (${YENTESTS_TEST_HOME}/.defaults) does not appear to exist."
 
 		# load environment variables stored for a test suite, carefully
 		[[ -f .env ]] && createRevertableEnvironment 
