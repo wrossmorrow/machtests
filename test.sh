@@ -925,7 +925,7 @@ env | grep '^YENTESTS_DEFAULT' | sed -E 's|^([^=]+=)(.*)$|\1"\2"|g' > .defaults
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-log "starting yentests..."
+log "starting yentests"
 
 # loop over test suites...
 for d in tests/** ; do 
@@ -947,6 +947,8 @@ for d in tests/** ; do
 	fi 
 
 done
+
+log "completed yentests"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
