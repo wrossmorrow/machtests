@@ -171,11 +171,13 @@ function _testCommand() {
 	# don't run draft tests, if we're only interested in production tests
 	[[ -n ${YENTESTS_RUN_PRODUCTION_ONLY} ]] \
 		&& [[ ${YENTESTS_TEST_IS_PRODUCTION} -ne 1 ]] \
+			&& log "skipping draft test \"${@}\" in production mode" \
 			&& return
 
 	# run ONLY draft tests, if we're only interested in testing tests
 	[[ -n ${YENTESTS_RUN_DRAFTS_ONLY} ]] \
 		&& [[ ${YENTESTS_TEST_IS_PRODUCTION} -eq 1 ]] \
+			&& log "skipping production test \"${@}\" in draft mode" \
 			&& return
 
 	# verbose logs tests start print
