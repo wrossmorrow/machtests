@@ -3,7 +3,7 @@
 
 ## Purpose 
 
-Run easily maintanable and extensible collections of test scripts on the `yen` servers. 
+Run easily maintanable and extensible collections of test scripts on the Stanford GSB `yen` servers, but really on any *nix machine. 
 
 ## Why
 
@@ -35,6 +35,7 @@ This illustrates our goal: _to contribute a test, all you have to know is how to
 
 While you only _have_ to know how to script your test to contribute a test, you can do alot here to control how your test runs with "frontmatter". This is described in more detail below. But, in brief, frontmatter will let you: 
 
+* declare your test a "draft" that should not run with the "production" tests, which are run on a schedule
 * customize the name of your test
 * provide a version number for your test
 * provide a description of the test
@@ -232,13 +233,12 @@ We also have to set the enviroment correctly for a `cron` job to run. This is ac
 
 ```
 #!/bin/bash
-cd /ifs/yentools/yentests/development
-# this export needed to support cron job
+cd /ifs/yentools/yentests/master
 export PATH="${PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin:/ifs/yentools/bin"
 bash test.sh -p
 ```
 
-Note the append of `/ifs/yentools/bin` to the `PATH` which would exist for a user, _but does not exist for a_ `cron` _job_. We should run the tests with an environment as close as possible to that of a real user. Note also the flag `-p`, which specifies that only "production" test scripts lacking a `@draft` frontmatter tag should be run. 
+Note the long append to `PATH` which adds values that would exist for a user, _but do not exist for a_ `cron` _job_. We should run the tests with an environment as close as possible to that of a real user. Note also the flag `-p`, which specifies that only "production" test scripts lacking a `@draft` frontmatter tag should be run on the schedule. 
 
 ## Installing yentests as a Scheduled systemd Unit
 

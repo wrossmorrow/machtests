@@ -68,9 +68,9 @@ function unsetEnvVarsMatchingPrefix() {
 	while read V ; do unset ${V} ; done < <( env | grep "^${1}" | awk -F'=' '{ print $1 }' )
 }
 
-# make an "open"(-ish) directory
+# make an "open"(-ish) directory. we port output to /dev/null to avoid printing "operation not permitted" "errors"
 function makeOpenDirectory() {
-	mkdir -p ${1} && chmod g+rwx ${1}
+	mkdir -p ${1} && chmod g+rwx ${1} 2>&1 /dev/null
 }
 
 # modify environment variables in a revertable way, as stored in .env-revert
